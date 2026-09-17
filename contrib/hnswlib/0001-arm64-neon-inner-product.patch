@@ -1,0 +1,51 @@
+From: RecServe <recserve@local>
+Date: Thu, 17 Sep 2026 00:00:00 +0000
+Subject: [PATCH] Add ARM64 NEON inner-product kernel
+
+Provide a float32x4 vmlaq path for InnerProduct on aarch64 / MSVC ARM64,
+matching the existing AVX implementation's 4-wide accumulation. Scalar
+tail handles dim % 4. This unblocks header-only builds on Windows on ARM
+where __AVX__ is undefined.
+
+---
+ hnswlib/space_ip.h | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/hnswlib/space_ip.h b/hnswlib/space_ip.h
+index 1111111..2222222 100644
+--- a/hnswlib/space_ip.h
++++ b/hnswlib/space_ip.h
+@@
+ static float
+ InnerProduct(const void *pVect1, const void *pVect2, const void *qty_ptr) {
+     size_t qty = *((size_t *) qty_ptr);
+     float res = 0;
++#if defined(__ARM_NEON) || defined(__aarch64__) || defined(_M_ARM64)
++    {
++        const float *a = (const float *) pVect1;
++        const float *b = (const float *) pVect2;
++#if defined(_MSC_VER)
++#include <arm64_neon.h>
++#else
++#include <arm_neon.h>
++#endif
++        float32x4_t acc = vdupq_n_f32(0.f);
++        size_t i = 0;
++        for (; i + 4 <= qty; i += 4) {
++            float32x4_t va = vld1q_f32(a + i);
++            float32x4_t vb = vld1q_f32(b + i);
++            acc = vmlaq_f32(acc, va, vb);
++        }
++        res = vgetq_lane_f32(acc, 0) + vgetq_lane_f32(acc, 1) +
++              vgetq_lane_f32(acc, 2) + vgetq_lane_f32(acc, 3);
++        for (; i < qty; i++) res += a[i] * b[i];
++        return res;
++    }
++#endif
+     for (unsigned i = 0; i < qty; i++) {
+         res += ((float *) pVect1)[i] * ((float *) pVect2)[i];
+     }
+     return (res);
+ }
+--
+2.46.0

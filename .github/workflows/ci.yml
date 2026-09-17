@@ -1,0 +1,30 @@
+name: recserve
+on:
+  push:
+  pull_request:
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [none, address, undefined]
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DRECSERVE_SANITIZER=${{ matrix.sanitizer }}
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+      - run: ./build/recserve_quality --csv data/quality_fixture.csv --k 10
+      - run: ./build/recserve_nearline --n 2000 --out data/events.bin
+      - run: ./build/recserve_soak --seconds 2 --items 512 --dim 16
+      - run: ./build/recserve_diagnose --p99 1000 --queue-p99 800 --score-p99 100
+      - if: matrix.sanitizer == 'none'
+        run: python3 scripts/perf_ci.py --bench ./build/recserve_bench --baseline /tmp/perf_baseline.json --write-baseline --items 512 --n 150
+  tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=Debug -DRECSERVE_SANITIZER=thread
+          cmake --build build-tsan -j 4
+          ./build-tsan/recserve_tests
