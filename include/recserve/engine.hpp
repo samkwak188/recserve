@@ -322,6 +322,37 @@ class Engine {
     return r;
   }
 
+  // End-to-end recall: what the SERVICE returned, versus the exact float32
+  // top-k. Unlike measure_retrieve_recall this goes through recommend_sync, so
+  // retrieve_k is inside the measurement -- shrinking the candidate list to make
+  // p99 look good shows up here as lost accuracy instead of being invisible.
+  double measure_response_recall(int k, int retrieve_k, int n_probe, unsigned seed = 7) {
+    if (cat.n == 0 || n_probe <= 0) return 0;
+    std::mt19937 rng(seed);
+    double acc = 0;
+    int n = 0;
+    for (int t = 0; t < n_probe; ++t) {
+      Request req;
+      req.user_id = static_cast<UserId>(rng() % static_cast<unsigned>(std::max(1, cfg.n_users)));
+      req.k = static_cast<std::uint32_t>(k);
+      req.retrieve_k = static_cast<std::uint32_t>(retrieve_k);
+      req.timeout_us = 1000000;
+      const Response r = recommend_sync(req);
+      if (r.status != Status::Ok) continue;
+      const float* q = user_query(req.user_id);
+      if (!q) continue;
+      auto exact = index.brute(cat, q, nullptr, k, Kernel::Simd);
+      std::unordered_set<ItemId> gold;
+      for (auto& e : exact) gold.insert(e.id);
+      std::vector<ItemId> got;
+      got.reserve(r.items.size());
+      for (auto& it : r.items) got.push_back(it.id);
+      acc += recall_at_k(got, gold, k);
+      ++n;
+    }
+    return n ? acc / n : 0.0;
+  }
+
   // Retrieve-recall against the exact float32 top-k, over `n_probe` random
   // queries. This is the number that says what a latency win actually cost.
   double measure_retrieve_recall(int k, int n_probe, unsigned seed = 7) {

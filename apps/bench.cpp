@@ -148,6 +148,8 @@ int main(int argc, char** argv) {
   }
 
   const double recall = recall_probe > 0 ? e.measure_retrieve_recall(k, recall_probe) : -1.0;
+  const double e2e_recall =
+      recall_probe > 0 ? e.measure_response_recall(k, retrieve_k, recall_probe) : -1.0;
   const double rss_mib = static_cast<double>(process_rss_bytes()) / (1024.0 * 1024.0);
   const double cat_mib = static_cast<double>(e.catalog_bytes()) / (1024.0 * 1024.0);
 
@@ -166,6 +168,7 @@ int main(int argc, char** argv) {
               << ",\"feature_p99_us\":" << last.feature_p99
               << ",\"hops_mean\":" << last.hops_mean
               << ",\"retrieve_recall\":" << recall
+              << ",\"response_recall\":" << e2e_recall
               << ",\"rss_mib\":" << rss_mib << ",\"catalog_mib\":" << cat_mib
               << ",\"build_s\":" << e.build_stats.seconds
               << ",\"build_threads\":" << e.build_stats.threads
@@ -174,7 +177,7 @@ int main(int argc, char** argv) {
   } else {
     std::cout << "mode=" << mode << " kernel=" << kernel_name(kern) << " isa=" << simd_isa()
               << " p99_mean_us=" << p99s.mean() << " p99_cv=" << p99s.cv()
-              << " qps_mean=" << qpss.mean() << " retrieve_recall=" << recall
+              << " qps_mean=" << qpss.mean() << " retrieve_recall=" << recall << " response_recall=" << e2e_recall
               << " rss_mib=" << rss_mib << "\n";
   }
   return 0;
