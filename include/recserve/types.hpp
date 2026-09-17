@@ -73,6 +73,7 @@ struct Response {
   std::uint32_t retrieve_us = 0;
   std::uint32_t score_us = 0;
   std::uint32_t hops = 0;  // graph nodes expanded during retrieval
+  std::uint32_t feature_generation = 0;  // snapshot version this request read
 };
 
 struct EngineConfig {

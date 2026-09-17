@@ -7,6 +7,7 @@
 #include "arena.hpp"
 #include "metrics.hpp"
 #include "quality.hpp"
+#include "feature_snapshot.hpp"
 #include <future>
 #include <random>
 #include <cstring>
@@ -37,6 +38,10 @@ class Engine {
   ThreadPool pool;
   ServeStats stats;
   BuildStats build_stats;
+  // When set, features are read through the lock-free snapshot instead of the
+  // mutex-guarded FeatureStore. Both paths stay in the binary so the cost of
+  // the mutex is measurable rather than asserted.
+  FeatureSnapshotStore* snap = nullptr;
   float rank_w[4] = {1.f, 0.15f, 0.10f, 0.05f};
   std::atomic<bool> running{false};
   std::uint32_t max_queue = 128;
@@ -144,17 +149,36 @@ class Engine {
       r.feature_us = cfg.feature_delay_us;
       return r;
     }
-
-    auto tf0 = now_us();
-    UserFeatures uf = features.user(req.user_id);
-    r.feature_us = static_cast<std::uint32_t>(now_us() - tf0);
-
     const float* q = user_query(req.user_id);
     if (!q) {
       r.status = Status::Unavailable;
       return r;
     }
 
+    const auto tf0 = now_us();
+    if (snap) {
+      // One acquire load covers the user row and every item row touched by the
+      // ranker, so the whole request sees one consistent feature generation.
+      const auto g = snap->read();
+      const UserFeatures& uf =
+          g->users[static_cast<std::size_t>(req.user_id) % g->users.size()];
+      r.feature_us = static_cast<std::uint32_t>(now_us() - tf0);
+      rank_into(r, req, q, uf, g->items.data(), g->items.size());
+      r.feature_generation = static_cast<std::uint32_t>(g->generation);
+    } else {
+      const UserFeatures uf = features.user(req.user_id);
+      r.feature_us = static_cast<std::uint32_t>(now_us() - tf0);
+      rank_into(r, req, q, uf, nullptr, 0);
+    }
+    r.hops = static_cast<std::uint32_t>(Index::last_hops());
+    r.status = Status::Ok;
+    return r;
+  }
+
+  // Retrieve then rank. `items` is the snapshot's item table when one is in
+  // use; nullptr falls back to the mutex-guarded store.
+  void rank_into(Response& r, const Request& req, const float* q, const UserFeatures& uf,
+                 const ItemFeatures* items, std::size_t n_items) {
     Scratch& sc = thread_scratch();
     const QuantizedQuery* qq = nullptr;
     if (cfg.kernel == Kernel::Int8) {
@@ -163,7 +187,7 @@ class Engine {
     }
 
     const int rk = static_cast<int>(std::max(req.k, req.retrieve_k));
-    auto tr0 = now_us();
+    const auto tr0 = now_us();
     if (cfg.use_hnsw && index.n() > 0) {
       sc.cand = index.retrieve(cat, q, qq, rk, cfg.ef_search, cfg.kernel);
     } else {
@@ -171,17 +195,22 @@ class Engine {
     }
     r.retrieve_us = static_cast<std::uint32_t>(now_us() - tr0);
 
-    auto ts0 = now_us();
+    const auto ts0 = now_us();
     auto& scored = sc.scored;
     scored.clear();
     scored.reserve(sc.cand.size());
     for (const auto& c : sc.cand) {
-      ItemFeatures itf = features.item(c.id);
+      float item_ctr = 0.f;
+      if (items) {
+        if (static_cast<std::size_t>(c.id) < n_items) item_ctr = items[c.id].ctr;
+      } else {
+        item_ctr = features.item(c.id).ctr;
+      }
       float recency = 0.f;
       for (int i = 0; i < uf.n_last; ++i) {
         if (uf.last_items[i] == c.id) recency = 1.f;
       }
-      scored.push_back({c.id, rank_score(c.score, uf.ctr, itf.ctr, recency, rank_w)});
+      scored.push_back({c.id, rank_score(c.score, uf.ctr, item_ctr, recency, rank_w)});
     }
     const std::size_t want = std::min<std::size_t>(req.k, scored.size());
     std::partial_sort(scored.begin(), scored.begin() + static_cast<std::ptrdiff_t>(want),
@@ -189,9 +218,6 @@ class Engine {
                       [](const ScoredItem& a, const ScoredItem& b) { return a.score > b.score; });
     r.score_us = static_cast<std::uint32_t>(now_us() - ts0);
     r.items.assign(scored.begin(), scored.begin() + static_cast<std::ptrdiff_t>(want));
-    r.hops = static_cast<std::uint32_t>(Index::last_hops());
-    r.status = Status::Ok;
-    return r;
   }
 
   // Single-threaded stats accumulation, used by bench and the agent's observe

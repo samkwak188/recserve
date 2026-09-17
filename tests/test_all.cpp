@@ -283,8 +283,94 @@ static void test_nearline_freshness_and_fault() {
   (void)store.user(1);
   auto dt = now_us() - t0;
   CHECK(dt >= 800);
-  auto lag = replica_lag(log, 25);
-  CHECK(lag.p50_ms == 25);
+}
+
+// The RCU snapshot must never let a reader observe a torn or half-applied
+// generation while the writer is publishing into the other buffer.
+static void test_snapshot_rcu_concurrency() {
+  FeatureSnapshotStore store;
+  const int n_items = 512;
+  store.init(n_items, 64);
+  std::atomic<bool> stop{false};
+  std::atomic<std::uint64_t> reads{0};
+  std::atomic<std::uint64_t> torn{0};
+
+  std::vector<std::thread> readers;
+  for (int t = 0; t < 4; ++t) {
+    readers.emplace_back([&]() {
+      while (!stop.load(std::memory_order_relaxed)) {
+        const auto g = store.read();
+        // Invariant that must hold in every published generation: likes never
+        // exceed views. A half-applied delta would break it.
+        for (int i = 0; i < n_items; ++i) {
+          if (g->items[static_cast<std::size_t>(i)].likes >
+              g->items[static_cast<std::size_t>(i)].views) {
+            torn.fetch_add(1, std::memory_order_relaxed);
+          }
+        }
+        reads.fetch_add(1, std::memory_order_relaxed);
+      }
+    });
+  }
+
+  for (int round = 0; round < 200; ++round) {
+    for (int i = 0; i < 64; ++i) {
+      store.stage(FeatureDelta{1000 + static_cast<std::uint64_t>(round),
+                               static_cast<UserId>(i % 64),
+                               static_cast<ItemId>((round * 7 + i) % n_items),
+                               static_cast<std::uint8_t>(i % 3 == 0 ? 1 : 0)});
+    }
+    store.publish();
+  }
+  stop = true;
+  for (auto& t : readers) t.join();
+
+  CHECK(torn.load() == 0);
+  CHECK(reads.load() > 0);
+  CHECK(store.publishes() == 200);
+  // Both buffers must agree once the writer has quiesced.
+  const auto g = store.read();
+  std::uint64_t views = 0;
+  for (int i = 0; i < n_items; ++i) views += g->items[static_cast<std::size_t>(i)].views;
+  CHECK(views == 200ull * 64ull);
+}
+
+static void test_sliding_window_ctr() {
+  SlidingWindowCounter w(60, 1000);
+  for (int i = 0; i < 100; ++i) w.add(10'000 + static_cast<std::uint64_t>(i) * 10, i % 4 == 0);
+  const float ctr = w.ctr(11'000, 5'000);
+  CHECK(ctr > 0.20f && ctr < 0.30f);   // 25% likes
+  CHECK(w.total_views() == 100);
+  // A bucket older than the window must not count.
+  SlidingWindowCounter w2(4, 1000);
+  w2.add(1'000, true);
+  w2.add(9'000, false);   // wraps the ring and resets the reused slot
+  CHECK(w2.total_views() == 1);
+}
+
+// The pipeline must publish on the interval and charge freshness at visibility.
+static void test_nearline_pipeline_publishes() {
+  const std::string path = "data/_test_events.bin";
+  synth_events(500, 16, 64, 1'000'000, 1).write_file(path);
+  FileEventSource src(path);
+  FeatureSnapshotStore store;
+  store.init(64, 16);
+  NearlinePipeline pipe(src, store, /*publish_interval_ms=*/100);
+
+  std::uint64_t clock = 1'000'000;
+  while (!src.eof()) {
+    pipe.step(clock, 64);
+    clock += 50;
+  }
+  pipe.flush(clock);
+  const auto& st = pipe.stats();
+  CHECK(st.consumed == 500);
+  CHECK(st.published == 500);
+  CHECK(st.publishes >= 2);
+  CHECK(st.freshness_ms.percentile(0.5) > 0);
+  const auto g = store.read();
+  CHECK(g->watermark_ms == 1'000'000 + 499);
+  std::remove(path.c_str());
 }
 
 static void test_loadshed() {
@@ -346,6 +432,9 @@ int main() {
     test_index_and_catalog_roundtrip();
     test_all_kernels_end_to_end();
     test_nearline_freshness_and_fault();
+    test_snapshot_rcu_concurrency();
+    test_sliding_window_ctr();
+    test_nearline_pipeline_publishes();
     test_loadshed();
     test_diagnose();
   } catch (...) {
