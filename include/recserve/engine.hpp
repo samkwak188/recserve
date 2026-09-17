@@ -326,6 +326,8 @@ class Engine {
     return n ? acc / n : 0.0;
   }
 
+  int n_queries() const { return n_user_queries_; }
+
   std::size_t catalog_bytes() const {
     return cat.aos.size() * sizeof(float) + cat.soa.size() * sizeof(float) +
            cat.blk.size() * sizeof(float) + cat.aos_i8.size() +

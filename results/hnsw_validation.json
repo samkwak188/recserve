@@ -1,0 +1,54 @@
+{
+  "items": 65536,
+  "dim": 64,
+  "clusters": 1024,
+  "m": 16,
+  "ef_construction": 100,
+  "k": 10,
+  "queries": 256,
+  "recserve_build": {
+    "items": 65536,
+    "dim": 64,
+    "clusters": 1024,
+    "m": 16,
+    "ef_construction": 100,
+    "build_s": 4.89093,
+    "build_threads": 12,
+    "max_level": 4,
+    "dist_calls": 152927511,
+    "avg_degree": 25.19,
+    "graph_mib": 8.51392,
+    "catalog_mib": 16
+  },
+  "rows": [
+    {
+      "ef": 32,
+      "hnswlib_recall": 0.383203125,
+      "recserve_recall": 0.380859,
+      "delta": -0.0023441249999999747,
+      "recserve_p99_us": 173.53
+    },
+    {
+      "ef": 64,
+      "hnswlib_recall": 0.556640625,
+      "recserve_recall": 0.538672,
+      "delta": -0.01796862499999996,
+      "recserve_p99_us": 115.05
+    },
+    {
+      "ef": 128,
+      "hnswlib_recall": 0.735546875,
+      "recserve_recall": 0.730078,
+      "delta": -0.00546887500000004,
+      "recserve_p99_us": 339.19
+    },
+    {
+      "ef": 256,
+      "hnswlib_recall": 0.8843750000000001,
+      "recserve_recall": 0.885547,
+      "delta": 0.0011719999999998398,
+      "recserve_p99_us": 2357.74
+    }
+  ],
+  "max_abs_delta": 0.01796862499999996
+}

@@ -47,6 +47,7 @@ recserve_app(recserve_nearline apps/nearline.cpp)
 recserve_app(recserve_soak apps/soak.cpp)
 recserve_app(recserve_rankd apps/rankd.cpp)
 recserve_app(recserve_diagnose apps/diagnose.cpp)
+recserve_app(recserve_fixture apps/fixture.cpp)
 
 enable_testing()
 add_test(NAME recserve_unit COMMAND recserve_tests)
