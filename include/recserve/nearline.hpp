@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <random>
+#include <cmath>
 
 namespace recserve {
 
@@ -186,16 +188,42 @@ class NearlinePipeline {
 };
 
 // Deterministic synthetic event stream for fixtures and CI.
+//
+// Item popularity is Zipf, not uniform: interaction counts in recommendation
+// logs are heavy-tailed, and a uniform log would make every per-item counter
+// equally warm and hide the fact that the head items dominate both the cache
+// behaviour and the feature-skew budget. zipf_s = 0 falls back to uniform.
 inline EventLog synth_events(int n, int users, int items, std::uint64_t t0 = 1'000'000,
-                             std::uint64_t step_ms = 1) {
+                             std::uint64_t step_ms = 1, double zipf_s = 1.0,
+                             unsigned seed = 7) {
   EventLog log;
   log.records.reserve(static_cast<std::size_t>(n));
+  std::mt19937 rng(seed);
+
+  std::vector<double> cdf;
+  if (zipf_s > 0) {
+    cdf.resize(static_cast<std::size_t>(items));
+    double acc = 0;
+    for (int i = 0; i < items; ++i) {
+      acc += 1.0 / std::pow(static_cast<double>(i) + 1.0, zipf_s);
+      cdf[static_cast<std::size_t>(i)] = acc;
+    }
+    for (auto& c : cdf) c /= acc;
+  }
+
   for (int i = 0; i < n; ++i) {
     EventRecord e;
     e.event_time_ms = t0 + static_cast<std::uint64_t>(i) * step_ms;
-    e.user_id = static_cast<UserId>(i % users);
-    e.item_id = static_cast<ItemId>((i * 7) % items);
-    e.type = static_cast<std::uint8_t>(i % 7 == 0 ? 1 : 0);
+    e.user_id = static_cast<UserId>(rng() % static_cast<unsigned>(std::max(1, users)));
+    if (cdf.empty()) {
+      e.item_id = static_cast<ItemId>((i * 7) % items);
+    } else {
+      const double u = static_cast<double>(rng()) / static_cast<double>(std::mt19937::max());
+      const auto it = std::lower_bound(cdf.begin(), cdf.end(), u);
+      e.item_id = static_cast<ItemId>(std::min<std::size_t>(
+          static_cast<std::size_t>(it - cdf.begin()), static_cast<std::size_t>(items - 1)));
+    }
+    e.type = static_cast<std::uint8_t>(rng() % 7 == 0 ? 1 : 0);
     log.records.push_back(e);
   }
   return log;

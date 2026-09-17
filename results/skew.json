@@ -1,0 +1,59 @@
+{
+  "events": "data/events.bin",
+  "n": 200000,
+  "items": 16384,
+  "rows": [
+    {
+      "publish_ms": 100,
+      "consumed": 200000,
+      "published": 199901,
+      "unpublished": 99,
+      "publishes": 1999,
+      "watermark_ms": 1199900,
+      "items_offline": 14557,
+      "items_differ": 74,
+      "views_missing": 99,
+      "max_abs_ctr_delta": 1.0,
+      "mean_abs_ctr_delta": 0.0001958267221615279
+    },
+    {
+      "publish_ms": 1000,
+      "consumed": 200000,
+      "published": 199001,
+      "unpublished": 999,
+      "publishes": 199,
+      "watermark_ms": 1199000,
+      "items_offline": 14557,
+      "items_differ": 553,
+      "views_missing": 999,
+      "max_abs_ctr_delta": 1.0,
+      "mean_abs_ctr_delta": 0.001464287761708359
+    },
+    {
+      "publish_ms": 5000,
+      "consumed": 200000,
+      "published": 195001,
+      "unpublished": 4999,
+      "publishes": 39,
+      "watermark_ms": 1195000,
+      "items_offline": 14557,
+      "items_differ": 1919,
+      "views_missing": 4999,
+      "max_abs_ctr_delta": 1.0,
+      "mean_abs_ctr_delta": 0.0055491320198908425
+    },
+    {
+      "publish_ms": 30000,
+      "consumed": 200000,
+      "published": 180001,
+      "unpublished": 19999,
+      "publishes": 6,
+      "watermark_ms": 1180000,
+      "items_offline": 14557,
+      "items_differ": 5065,
+      "views_missing": 19999,
+      "max_abs_ctr_delta": 1.0,
+      "mean_abs_ctr_delta": 0.019699165938051356
+    }
+  ]
+}

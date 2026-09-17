@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <chrono>
+#include <fstream>
 
 using namespace recserve;
 
@@ -42,9 +43,11 @@ int main(int argc, char** argv) {
   std::string out = "data/events.bin";
   KafkaConfig kcfg;
   int publish_ms = 100, serve_threads = 4, seconds = 3, items = 16384, dim = 64, users = 4096;
-  int write_log = 0;
+  int write_log = 0, replay = 0;
   long long rate = 50'000;
+  double zipf = 1.0;
   bool json = false;
+  std::string dump_features;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -63,6 +66,9 @@ int main(int argc, char** argv) {
     else if (a == "--write-log" && i + 1 < argc) write_log = std::atoi(argv[++i]);
     else if (a == "--out" && i + 1 < argc) out = argv[++i];
     else if (a == "--n" && i + 1 < argc) write_log = std::atoi(argv[++i]);
+    else if (a == "--replay" && i + 1 < argc) replay = std::atoi(argv[++i]);
+    else if (a == "--zipf" && i + 1 < argc) zipf = std::atof(argv[++i]);
+    else if (a == "--dump-features" && i + 1 < argc) dump_features = argv[++i];
     else if (a == "--json") json = true;
   }
 
@@ -70,7 +76,7 @@ int main(int argc, char** argv) {
   if (write_log > 0) {
     const auto p = std::filesystem::path(out).parent_path();
     if (!p.empty()) std::filesystem::create_directories(p);
-    synth_events(write_log, 64, 256).write_file(out);
+    synth_events(write_log, users, items, 1'000'000, 1, zipf).write_file(out);
     std::cout << "wrote " << write_log << " events to " << out << "\n";
     return 0;
   }
@@ -86,7 +92,7 @@ int main(int argc, char** argv) {
     }
   } else {
     if (!std::filesystem::exists(events_path)) {
-      synth_events(200'000, users, items).write_file(events_path);
+      synth_events(200'000, users, items, 1'000'000, 1, zipf).write_file(events_path);
     }
     auto f = std::make_unique<FileEventSource>(events_path, /*loop=*/true);
     if (!f->ok()) {
@@ -94,6 +100,53 @@ int main(int argc, char** argv) {
       return 1;
     }
     src = std::move(f);
+  }
+
+  // ----------------------------------------------------------------- replay --
+  // Deterministic event-time replay used for the offline/online skew check: no
+  // rate limiting, no wall clock, publish on an event-time interval. Two runs
+  // over the same log produce byte-identical feature tables.
+  if (replay > 0) {
+    FeatureSnapshotStore rstore;
+    rstore.init(items, users);
+    NearlinePipeline rpipe(*src, rstore, static_cast<std::uint64_t>(publish_ms));
+    std::vector<EventRecord> buf(1024);
+    std::uint64_t consumed = 0, clock = 0;
+    while (consumed < static_cast<std::uint64_t>(replay) && !src->eof()) {
+      const std::size_t want =
+          std::min<std::size_t>(buf.size(), static_cast<std::size_t>(replay) - consumed);
+      const std::size_t n = src->poll(buf.data(), want, 10);
+      if (n == 0) break;
+      for (std::size_t i = 0; i < n; ++i) {
+        clock = buf[i].event_time_ms;
+        rpipe.stage(buf[i], buf[i].event_time_ms);
+        rpipe.publish_if_due(clock);
+      }
+      consumed += n;
+    }
+    // Deliberately NOT flushing: whatever is still staged is the skew. A serving
+    // host that is scraped between publishes sees exactly this.
+    const auto g = rstore.read();
+    if (!dump_features.empty()) {
+      const auto dp = std::filesystem::path(dump_features).parent_path();
+      if (!dp.empty()) std::filesystem::create_directories(dp);
+      std::ofstream o(dump_features);
+      o << "item,views,likes,ctr\n";
+      for (std::size_t i = 0; i < g->items.size(); ++i) {
+        if (g->items[i].views == 0) continue;
+        o << i << "," << g->items[i].views << "," << g->items[i].likes << ","
+          << std::setprecision(9) << g->items[i].ctr << "\n";
+      }
+    }
+    const auto& rs = rpipe.stats();
+    std::cout << "{\"mode\":\"replay\",\"consumed\":" << consumed
+              << ",\"published\":" << rs.published
+              << ",\"unpublished\":" << (consumed - rs.published)
+              << ",\"publishes\":" << rs.publishes
+              << ",\"publish_ms\":" << publish_ms
+              << ",\"watermark_ms\":" << g->watermark_ms
+              << ",\"generation\":" << g->generation << "}\n";
+    return 0;
   }
 
   // ---------------------------------------------------------------- engine --

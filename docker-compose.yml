@@ -1,4 +1,13 @@
-# Local Kafka-compatible broker for the nearline path. RecServe tests do not require this.
+# Local stack for the nearline path: a Kafka-compatible broker and a Flink
+# cluster. RecServe's tests, bench and the file-based nearline path do not need
+# any of this; it exists so the Kafka consumer and the Flink aggregate run
+# against real services rather than being claimed.
+#
+#   docker compose up -d
+#   python scripts/kafka_produce.py --n 200000 --rate 20000
+#   cmake -S . -B build -DRECSERVE_WITH_RDKAFKA=ON && cmake --build build
+#   ./build/recserve_nearline --source kafka --brokers 127.0.0.1:19092
+#   docker compose exec flink-jobmanager flink run -py /opt/recserve/flink/ctr_aggregate.py
 services:
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v24.2.11
@@ -8,7 +17,40 @@ services:
       - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr internal://redpanda:9092,external://127.0.0.1:19092
       - --smp 1
-      - --memory 512M
+      - --memory 1G
       - --mode dev-container
     ports:
       - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  flink-jobmanager:
+    image: flink:1.18-scala_2.12-java11
+    command: jobmanager
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+      RECSERVE_BROKERS: redpanda:9092
+    volumes:
+      - ./:/opt/recserve
+
+  flink-taskmanager:
+    image: flink:1.18-scala_2.12-java11
+    command: taskmanager
+    depends_on:
+      - flink-jobmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+      RECSERVE_BROKERS: redpanda:9092
+    volumes:
+      - ./:/opt/recserve
