@@ -26,6 +26,31 @@ enum class Status : std::uint32_t {
 
 enum class DType { Float32, Int8 };
 
+// Which scoring kernel the engine uses. SoaStrided is deliberately kept: it is
+// the layout that loses, and the board reports it next to Blocked so the
+// difference between "SoA" and "SoA that matches the access pattern" is visible.
+enum class Kernel : std::uint8_t { Scalar, Simd, SoaStrided, Blocked, Int8 };
+
+inline const char* kernel_name(Kernel k) {
+  switch (k) {
+    case Kernel::Scalar: return "scalar";
+    case Kernel::Simd: return "simd";
+    case Kernel::SoaStrided: return "soa_strided";
+    case Kernel::Blocked: return "blocked";
+    case Kernel::Int8: return "int8";
+  }
+  return "scalar";
+}
+
+inline Kernel kernel_from_string(const std::string& s) {
+  if (s == "simd") return Kernel::Simd;
+  if (s == "soa_strided" || s == "soa") return Kernel::SoaStrided;
+  if (s == "blocked") return Kernel::Blocked;
+  if (s == "int8") return Kernel::Int8;
+  return Kernel::Scalar;
+}
+
+
 struct Request {
   RequestId id = 0;
   UserId user_id = 0;
@@ -47,21 +72,23 @@ struct Response {
   std::uint32_t feature_us = 0;
   std::uint32_t retrieve_us = 0;
   std::uint32_t score_us = 0;
+  std::uint32_t hops = 0;  // graph nodes expanded during retrieval
 };
 
 struct EngineConfig {
   int dim = static_cast<int>(kDefaultDim);
   int n_items = 0;
   int n_users = 0;
+  int n_clusters = 0;
   int workers = 0;  // 0 = hardware_concurrency
   bool pin_workers = false;
   bool use_arena = true;
-  bool use_soa = true;
-  bool use_simd = true;
   bool use_flat_features = true;
-  DType dtype = DType::Float32;
+  Kernel kernel = Kernel::Simd;
   int hnsw_m = 16;
-  int hnsw_ef = 64;
+  int ef_search = 64;
+  int ef_construction = 64;
+  int build_threads = 0;  // 0 = hardware_concurrency
   bool use_hnsw = true;
   std::uint32_t feature_delay_us = 0;  // fault injection
   bool feature_timeout = false;

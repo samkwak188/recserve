@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
 
   Engine e;
   e.cfg.use_hnsw = false;
+  e.cfg.kernel = Kernel::Simd;
   e.init_random(items, 64, dim, 19);
 
   std::mutex mu;

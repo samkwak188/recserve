@@ -44,6 +44,7 @@ struct Histogram {
 struct ServeStats {
   Histogram latency_us;
   Histogram queue_us;
+  Histogram retrieve_us;
   Histogram score_us;
   Histogram feature_us;
   Histogram freshness_ms;
@@ -52,6 +53,16 @@ struct ServeStats {
   std::uint64_t loadshed = 0;
   std::uint64_t late = 0;  // completed after intended start+timeout in open-loop
   std::uint64_t sent = 0;
+
+  void clear() {
+    latency_us.clear();
+    queue_us.clear();
+    retrieve_us.clear();
+    score_us.clear();
+    feature_us.clear();
+    freshness_ms.clear();
+    ok = timeout = loadshed = late = sent = 0;
+  }
 };
 
 }  // namespace recserve

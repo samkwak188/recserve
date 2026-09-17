@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
 
   Engine e;
   e.cfg.use_hnsw = true;
+  e.cfg.ef_search = 64;
   auto rows = load_interactions_csv(csv);
   if (!rows.empty()) {
     int max_item = 0, max_user = 0;
@@ -35,11 +36,8 @@ int main(int argc, char** argv) {
       max_user = std::max(max_user, static_cast<int>(r.user));
     }
     n_items = std::max(n_items, max_item + 1);
+    e.cfg.kernel = use_int8 ? Kernel::Int8 : Kernel::Simd;
     e.init_random(n_items, max_user + 1, dim, 11);
-    if (use_int8) {
-      e.cat.quantize_i8();
-      e.cfg.dtype = DType::Int8;
-    }
     std::vector<Interaction> train, test;
     temporal_split(rows, 0.8, train, test);
     auto rep = e.eval_quality(train, test, k);

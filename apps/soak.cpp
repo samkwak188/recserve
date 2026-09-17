@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
   }
   Engine e;
   e.cfg.use_hnsw = true;
+  e.cfg.kernel = Kernel::Simd;
   e.init_random(items, 64, dim, 17);
   auto start = std::chrono::steady_clock::now();
   std::size_t max_rss = rss_bytes();

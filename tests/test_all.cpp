@@ -7,6 +7,8 @@
 #include <iostream>
 #include <cmath>
 #include <stdexcept>
+#include <random>
+#include <cstdio>
 
 #define CHECK(cond)                                                                 \
   do {                                                                              \
@@ -88,18 +90,134 @@ static void test_brute_vs_self() {
   Engine e;
   e.cfg.use_hnsw = false;
   e.init_random(32, 8, 8, 2);
-  float* q = e.cat.aos_item(0);
-  auto a = e.index.brute(e.cat, q, 5, false, false);
-  auto b = e.index.brute(e.cat, q, 5, false, false);
+  const float* q = e.cat.aos_item(0);
+  auto a = e.index.brute(e.cat, q, nullptr, 5, Kernel::Scalar);
+  auto b = e.index.brute(e.cat, q, nullptr, 5, Kernel::Simd);
   CHECK(a.size() == 5);
   CHECK(a[0].id == b[0].id);
+  CHECK(a[0].id == 0);  // an item is its own nearest neighbour under inner product
+}
+
+// The SIMD int8 dot must agree exactly with the integer reference. A mismatch
+// here is a silent wrong-answer bug, not a slow path.
+static void test_int8_kernel_exactness() {
+  std::mt19937 rng(9);
+  for (int dim : {16, 32, 64, 65, 96, 127}) {
+    std::vector<std::int8_t> a(static_cast<std::size_t>(dim)), b(static_cast<std::size_t>(dim));
+    for (int i = 0; i < dim; ++i) {
+      a[static_cast<std::size_t>(i)] = static_cast<std::int8_t>(static_cast<int>(rng() % 255) - 127);
+      b[static_cast<std::size_t>(i)] = static_cast<std::int8_t>(static_cast<int>(rng() % 255) - 127);
+    }
+    const int ref = dot_i8_scalar(a.data(), b.data(), dim);
+    CHECK(dot_i8(a.data(), b.data(), dim) == ref);
+  }
+}
+
+// Quantization is lossy by design; bound the loss instead of asserting equality.
+static void test_quantized_query_error() {
+  std::mt19937 rng(11);
+  std::normal_distribution<float> nd(0.f, 1.f);
+  const int dim = 64;
+  std::vector<float> x(dim), y(dim);
+  for (int i = 0; i < dim; ++i) { x[i] = nd(rng); y[i] = nd(rng); }
+  l2_normalize(x.data(), dim);
+  l2_normalize(y.data(), dim);
+
+  Catalog cat;
+  cat.resize(1, dim);
+  std::copy(y.begin(), y.end(), cat.aos_item(0));
+  cat.quantize_i8();
+  QuantizedQuery qq;
+  qq.set(x.data(), dim);
+
+  const float exact = dot_simd(x.data(), y.data(), dim);
+  const float approx = cat.dot_item(x.data(), &qq, 0, Kernel::Int8);
+  CHECK(std::fabs(exact - approx) < 0.01f);
+}
+
+// Blocked (AoSoA) scoring must return the same scores as the AoS SIMD kernel.
+static void test_blocked_matches_simd() {
+  Engine e;
+  e.cfg.use_hnsw = false;
+  e.cfg.kernel = Kernel::Blocked;
+  e.init_random(301, 8, 64, 6);  // not a multiple of kBlock: exercises the tail
+  const float* q = e.cat.aos_item(7);
+  auto ref = e.index.brute(e.cat, q, nullptr, 10, Kernel::Simd);
+  auto got = e.index.brute(e.cat, q, nullptr, 10, Kernel::Blocked);
+  CHECK(ref.size() == got.size());
+  for (std::size_t i = 0; i < ref.size(); ++i) {
+    CHECK(ref[i].id == got[i].id);
+    CHECK(std::fabs(ref[i].score - got[i].score) < 1e-4f);
+  }
+}
+
+// The strided SoA layout is slow but must still be correct.
+static void test_soa_strided_matches_simd() {
+  Engine e;
+  e.cfg.use_hnsw = false;
+  e.cfg.kernel = Kernel::SoaStrided;
+  e.init_random(128, 8, 32, 8);
+  const float* q = e.cat.aos_item(3);
+  auto ref = e.index.brute(e.cat, q, nullptr, 5, Kernel::Simd);
+  auto got = e.index.brute(e.cat, q, nullptr, 5, Kernel::SoaStrided);
+  for (std::size_t i = 0; i < ref.size(); ++i) CHECK(ref[i].id == got[i].id);
+}
+
+static void test_visited_set_epochs() {
+  VisitedSet v;
+  v.resize(8);
+  v.next_epoch();
+  CHECK(!v.test_and_set(3));
+  CHECK(v.test_and_set(3));
+  v.next_epoch();
+  CHECK(!v.test_and_set(3));  // new epoch clears without touching memory
+}
+
+// The graph must actually navigate: a random graph would not reach this recall.
+static void test_nsw_recall() {
+  Engine e;
+  e.cfg.use_hnsw = true;
+  e.cfg.hnsw_m = 16;
+  e.cfg.ef_construction = 64;
+  e.cfg.ef_search = 64;
+  e.cfg.build_threads = 1;
+  e.init_random(4000, 256, 32, 21);
+  const double r = e.measure_retrieve_recall(10, 48);
+  CHECK(r > 0.90);
+  CHECK(e.index.avg_degree() > 2.0);
+}
+
+static void test_index_and_catalog_roundtrip() {
+  Engine e;
+  e.cfg.use_hnsw = true;
+  e.cfg.build_threads = 1;
+  e.init_random(512, 64, 16, 33);
+  const std::string cp = "data/_test_cat.bin", ip = "data/_test_idx.bin";
+  CHECK(e.cat.save(cp));
+  CHECK(e.index.save(ip));
+
+  Catalog c2;
+  CHECK(c2.load(cp));
+  CHECK(c2.n == e.cat.n && c2.dim == e.cat.dim);
+  for (int d = 0; d < c2.dim; ++d) CHECK(std::fabs(c2.aos_item(5)[d] - e.cat.aos_item(5)[d]) < 1e-6f);
+
+  Index i2;
+  CHECK(i2.load(ip));
+  CHECK(i2.n() == e.index.n());
+  const float* q = e.cat.aos_item(9);
+  auto a = e.index.retrieve(e.cat, q, nullptr, 5, 32, Kernel::Simd);
+  auto b = i2.retrieve(c2, q, nullptr, 5, 32, Kernel::Simd);
+  CHECK(a.size() == b.size());
+  for (std::size_t i = 0; i < a.size(); ++i) CHECK(a[i].id == b[i].id);
+  std::remove(cp.c_str());
+  std::remove(ip.c_str());
 }
 
 static void test_quality_gate() {
   Engine e;
   e.cfg.use_hnsw = true;
   e.cfg.hnsw_m = 8;
-  e.cfg.hnsw_ef = 16;
+  e.cfg.ef_search = 16;
   e.init_random(48, 12, 8, 3);
   std::vector<Interaction> train, test;
   for (int u = 0; u < 12; ++u) {
@@ -116,19 +234,34 @@ static void test_quality_gate() {
   CHECK(rep.recall50 >= 0.0);
 }
 
-static void test_int8_and_soa() {
-  Engine e;
-  e.cfg.use_hnsw = false;
-  e.init_random(24, 4, 16, 4);
+// End to end: every kernel returns k items and the int8 path returns mostly the
+// same ones as float32 on a catalog this small.
+static void test_all_kernels_end_to_end() {
   Request q;
   q.user_id = 1;
   q.k = 3;
-  auto f32 = e.recommend_sync(q);
-  e.cat.quantize_i8();
-  e.cfg.dtype = DType::Int8;
-  auto i8 = e.recommend_sync(q);
-  CHECK(f32.items.size() == 3);
-  CHECK(i8.items.size() == 3);
+  std::vector<ItemId> f32_ids;
+  for (Kernel kern : {Kernel::Scalar, Kernel::Simd, Kernel::SoaStrided, Kernel::Blocked,
+                      Kernel::Int8}) {
+    Engine e;
+    e.cfg.use_hnsw = false;
+    e.cfg.kernel = kern;
+    e.init_random(256, 16, 64, 4);
+    auto r = e.recommend_sync(q);
+    CHECK(r.status == Status::Ok);
+    CHECK(r.items.size() == 3);
+    if (kern == Kernel::Scalar) {
+      for (auto& it : r.items) f32_ids.push_back(it.id);
+    } else {
+      int overlap = 0;
+      for (auto& it : r.items) {
+        for (auto id : f32_ids) {
+          if (it.id == id) ++overlap;
+        }
+      }
+      CHECK(overlap >= 2);  // int8 may reorder the tail, not the head
+    }
+  }
 }
 
 static void test_nearline_freshness_and_fault() {
@@ -204,7 +337,14 @@ int main() {
     test_topk_and_timeout();
     test_brute_vs_self();
     test_quality_gate();
-    test_int8_and_soa();
+    test_int8_kernel_exactness();
+    test_quantized_query_error();
+    test_blocked_matches_simd();
+    test_soa_strided_matches_simd();
+    test_visited_set_epochs();
+    test_nsw_recall();
+    test_index_and_catalog_roundtrip();
+    test_all_kernels_end_to_end();
     test_nearline_freshness_and_fault();
     test_loadshed();
     test_diagnose();

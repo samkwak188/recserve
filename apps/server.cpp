@@ -26,7 +26,8 @@ int main(int argc, char** argv) {
   Engine e;
   e.cfg.pin_workers = pin;
   e.cfg.use_hnsw = true;
-  e.init_random(n_items, 256, dim, 7);
+  e.cfg.kernel = Kernel::Simd;
+  e.init_random(n_items, 4096, dim, 7);
   e.start_pool();
 
   socket_t srv = listen_tcp(static_cast<std::uint16_t>(port));
