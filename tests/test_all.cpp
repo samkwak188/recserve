@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <random>
 #include <cstdio>
+#include <filesystem>
+#include <system_error>
 #include <thread>
 
 #define CHECK(cond)                                                                 \
@@ -20,6 +22,16 @@
   } while (0)
 
 using namespace recserve;
+
+// Scratch files must not depend on the working directory: ctest runs the binary
+// from the build tree, a developer runs it from the repo root, and "data/..."
+// silently resolves to a directory that exists in one case and not the other.
+static std::string scratch(const char* name) {
+  const auto dir = std::filesystem::temp_directory_path() / "recserve_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  return (dir / name).string();
+}
 
 static void test_dot_and_normalize() {
   float a[4] = {3.f, 0.f, 4.f, 0.f};
@@ -221,7 +233,7 @@ static void test_index_and_catalog_roundtrip() {
   e.cfg.use_hnsw = true;
   e.cfg.build_threads = 1;
   e.init_random(512, 64, 16, 33);
-  const std::string cp = "data/_test_cat.bin", ip = "data/_test_idx.bin";
+  const std::string cp = scratch("cat.bin"), ip = scratch("idx.bin");
   CHECK(e.cat.save(cp));
   CHECK(e.index.save(ip));
 
@@ -391,7 +403,7 @@ static void test_sliding_window_ctr() {
 
 // The pipeline must publish on the interval and charge freshness at visibility.
 static void test_nearline_pipeline_publishes() {
-  const std::string path = "data/_test_events.bin";
+  const std::string path = scratch("events.bin");
   synth_events(500, 16, 64, 1'000'000, 1).write_file(path);
   FileEventSource src(path);
   FeatureSnapshotStore store;

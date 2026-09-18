@@ -50,7 +50,10 @@ recserve_app(recserve_diagnose apps/diagnose.cpp)
 recserve_app(recserve_fixture apps/fixture.cpp)
 
 enable_testing()
-add_test(NAME recserve_unit COMMAND recserve_tests)
+# Run from the source tree so fixtures under data/ resolve the same way they
+# do for a developer running the binary by hand.
+add_test(NAME recserve_unit COMMAND recserve_tests
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(RECSERVE_WITH_RDKAFKA)
   find_library(RDKAFKA_CPP NAMES rdkafka++ rdkafkacpp)
