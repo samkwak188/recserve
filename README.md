@@ -120,6 +120,69 @@ Recall is measured **end to end**, through `recommend_sync`, so shrinking
 `retrieve_k` to buy latency shows up as lost accuracy instead of hiding from a
 probe that queried the index directly.
 
+### Recommendation quality on real embeddings
+
+Synthetic vectors measure kernels fine — a dot product does not care where the
+numbers came from — but they make recall@10 a statement about high-dimensional
+geometry rather than about recommendation quality.
+[`scripts/prep_movielens.py`](scripts/prep_movielens.py) fits implicit-feedback
+ALS ([Hu, Koren & Volinsky, ICDM 2008](https://doi.org/10.1109/ICDM.2008.22)) on
+MovieLens with a per-user temporal split, and
+[`recserve_eval`](apps/eval.cpp) serves those factors through the real request
+path, filtering items the user already saw.
+
+**ml-25m** — 162,342 users, 40,858 items, 10.0M train / 2.4M held out, 4,096
+evaluation users, recall@10 ceiling 0.652:
+
+| method | recall@10 | ndcg@10 |
+|---|---|---|
+| random | 0.0003 | 0.0006 |
+| most-popular | 0.0503 | 0.0630 |
+| **ALS, exact scan** | **0.0720** | **0.0739** |
+| ALS, served through HNSW (ef=16) | 0.0714 | 0.0736 |
+
+ALS beats most-popular by **+43.0%** recall — the baseline that matters, because
+a model that ties popularity has learned popularity. The C++ service and an
+independent numpy implementation of the same metric **agree to 0.00000**.
+
+And the headline: **on trained embeddings HNSW reaches retrieve-recall 0.9946 at
+ef=16**, versus 0.55 at ef=64 on synthetic uniform vectors. End-to-end quality
+goes 0.0720 → 0.0714 — 0.8% of the model's accuracy traded for **2.0× lower p99**
+(405 µs → 198 µs). Real embedding tables have low intrinsic dimension; i.i.d.
+Gaussian directions are the documented worst case, and the old numbers were
+measuring that rather than the graph.
+
+### Sharding costs tail latency and buys recall
+
+Real catalogs do not fit on one machine. [`recserve_shard`](apps/shard.cpp)
+splits the catalog across N shards, scatters every query, and merges the partial
+top-K lists. A request finishes when its **slowest** shard replies, so
+end-to-end latency is the maximum of N samples — [Dean & Barroso, "The Tail at
+Scale", CACM 56(2), 2013](https://doi.org/10.1145/2408776.2408794).
+
+1M items, k=10, ef=64, on a 12-core host:
+
+| shards | items/shard | shard p99 | e2e p99 | amplification | recall@10 |
+|---|---|---|---|---|---|
+| 1 | 1,000,000 | 260 µs | 310 µs | 1.19× | 0.1601 |
+| 2 | 500,000 | 269 µs | 389 µs | 1.45× | 0.2480 |
+| 4 | 250,000 | 256 µs | 451 µs | 1.76× | 0.3718 |
+| 8 | 125,000 | 276 µs | 621 µs | 2.25× | 0.5003 |
+| 16 \* | 62,500 | 453 µs | 3,239 µs | 7.15× | 0.6484 |
+| 32 \* | 31,250 | 240 µs | 2,606 µs | 10.86× | 0.7985 |
+
+\* more shards than cores, so those rows include CPU queueing on top of the
+structural effect — read them as an upper bound.
+
+Per-shard p99 stays flat while end-to-end p99 grows: that is the tail effect,
+not slower shards. Recall rises because each shard searches its own smaller
+graph at the same ef and every shard contributes its own top-k, so candidates
+examined scale with N. **Sharding buys accuracy and costs tail latency** — that
+trade is the decision, not whether scatter-gather works.
+
+Honest scope: shards are threads in one process. No network, no separate failure
+domain, so this is a *lower bound* on what a real deployment would see.
+
 ### The feature writer no longer stalls the readers
 
 `FeatureStore` took one `std::mutex` on every `user()` and `item()` call.
@@ -256,8 +319,10 @@ build/Release/recserve_loadgen --port 9400 --qps 200 --n 500
 | `recserve_nearline` | ingest service; `--feature-store mutex\|snapshot`, `--source file\|kafka`, `--replay` |
 | `recserve_rankd` | ranker process with a bounded queue and load-shed |
 | `recserve_soak` | leak/RSS soak (`--seconds 86400` for 24 h) |
+| `recserve_eval` | recommendation quality on real embeddings, through the request path |
+| `recserve_shard` | sharded scatter-gather retrieval and tail amplification |
 | `recserve_diagnose` | bottleneck classifier |
-| `recserve_tests` | 20 tests: SIMD exactness, quantization error bounds, RCU concurrency, HNSW recall, save/load round trips |
+| `recserve_tests` | 22 tests: SIMD exactness, quantization error bounds, RCU concurrency, HNSW recall, save/load round trips |
 
 ## Scripts
 
@@ -270,6 +335,9 @@ build/Release/recserve_loadgen --port 9400 --qps 200 --n 500
 | `agent.py` | the closed loop; `--compare`, `--validate-pr` |
 | `cost_model.py` | hosts and dollars from measured QPS and bytes |
 | `offline_ctr.py` | batch CTR reference the Flink job must match |
+| `prep_movielens.py` | download MovieLens, fit ALS, export a real catalog |
+| `eval_baselines.py` | random/popularity baselines + C++ vs numpy cross-check |
+| `compare_flink.py` | Flink output must equal the Python reference exactly |
 | `perf_ci.py` | p99 regression gate |
 
 ## Kafka and Flink
@@ -288,13 +356,26 @@ nearline path without a broker.
 - `docker compose up -d` brings up Redpanda plus a Flink jobmanager and
   taskmanager.
 
-**Honest scope**: `apache-flink` does not build on Windows/ARM64, so the Flink
-job runs in docker and CI, not on the host these numbers came from.
-[`scripts/offline_ctr.py`](scripts/offline_ctr.py) implements the identical
-aggregation in plain Python, CI asserts the two agree on the same records, and
-the published skew numbers come from that reference. Consumer lag and freshness
-are different quantities and both are reported: a consumer can be caught up on
-offsets and still serve minutes-old features.
+**Both are verified in CI, not asserted.** The `kafka-integration` job produces
+50,000 records to a Redpanda service container and requires the C++ consumer to
+drain all 50,000, finish below 100 records of lag, and report a freshness p99
+strictly greater than zero. The `flink-job` job runs the actual Flink job on a
+real Flink runtime and requires its output to equal
+[`scripts/offline_ctr.py`](scripts/offline_ctr.py) exactly — the producer dumps
+the bytes it sent, so the two sides compare implementations rather than
+datasets. Latest run: **1,822 items agree exactly, 20,000 events accounted
+for**.
+
+Two defects the first green CI run exposed, both now fixed and both guarded by
+those assertions: `query_watermark_offsets` was a synchronous broker round-trip
+inside the ingest loop, holding throughput to 1,116 events/s against a 25,000
+events/s producer and reporting the resulting backlog as consumer lag; and
+freshness read exactly 0.0 ms because the consumer stamped `steady_clock` (time
+since boot) while the producer stamped Unix epoch. A broken metric looked like a
+perfect one.
+
+`apache-flink` does not build on Windows/ARM64, so the Flink job runs in CI and
+docker rather than on the host the latency numbers came from.
 
 ## Workloads
 
@@ -312,10 +393,17 @@ offsets and still serve minutes-old features.
 
 ## CI
 
-`.github/workflows/ci.yml` runs the build under ASan, UBSan and TSan, the unit
-tests, the perf gate, the agent's `--validate-pr` verdict, the Flink-vs-reference
-aggregation check, and an end-to-end Kafka integration job against a Redpanda
-service container.
+Seven jobs, all green:
+
+| job | what it proves |
+|---|---|
+| `build-and-test` | builds and tests under none/ASan/UBSan/TSan |
+| `index-correctness` | RecServe HNSW tracks hnswlib on identical data |
+| `perf-gate` | p99 regression gate + the agent's `--validate-pr` verdict |
+| `offline-reference` | C++ online aggregate == Python batch aggregate |
+| `kafka-integration` | real broker, real librdkafka consumer, lag and freshness are real |
+| `flink-job` | the Flink job runs and its output equals the reference exactly |
+| `quality-real-data` | ALS on MovieLens; C++ reproduces numpy; HNSW recall > 0.95 |
 
 ## License
 

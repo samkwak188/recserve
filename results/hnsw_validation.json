@@ -12,43 +12,43 @@
     "clusters": 1024,
     "m": 16,
     "ef_construction": 100,
-    "build_s": 4.6414,
+    "build_s": 5.49016,
     "build_threads": 12,
     "max_level": 4,
-    "dist_calls": 152943792,
-    "avg_degree": 25.1861,
+    "dist_calls": 152900977,
+    "avg_degree": 25.1953,
     "graph_mib": 8.51392,
     "catalog_mib": 16
   },
   "rows": [
     {
       "ef": 32,
-      "hnswlib_recall": 0.368359375,
-      "recserve_recall": 0.374219,
-      "delta": 0.005859625000000035,
-      "recserve_p99_us": 76.4
+      "hnswlib_recall": 0.381640625,
+      "recserve_recall": 0.373828,
+      "delta": -0.007812625000000017,
+      "recserve_p99_us": 73.04
     },
     {
       "ef": 64,
-      "hnswlib_recall": 0.54453125,
-      "recserve_recall": 0.542578,
-      "delta": -0.0019532500000000175,
-      "recserve_p99_us": 106.48
+      "hnswlib_recall": 0.5609374999999999,
+      "recserve_recall": 0.545703,
+      "delta": -0.015234499999999818,
+      "recserve_p99_us": 239.15
     },
     {
       "ef": 128,
-      "hnswlib_recall": 0.728515625,
-      "recserve_recall": 0.727344,
-      "delta": -0.0011716250000000095,
-      "recserve_p99_us": 151.55
+      "hnswlib_recall": 0.746875,
+      "recserve_recall": 0.729297,
+      "delta": -0.017577999999999983,
+      "recserve_p99_us": 209.18
     },
     {
       "ef": 256,
-      "hnswlib_recall": 0.8902343750000001,
+      "hnswlib_recall": 0.8882812500000001,
       "recserve_recall": 0.882031,
-      "delta": -0.008203375000000124,
-      "recserve_p99_us": 572.53
+      "delta": -0.006250250000000124,
+      "recserve_p99_us": 389.42
     }
   ],
-  "max_abs_delta": 0.008203375000000124
+  "max_abs_delta": 0.017577999999999983
 }

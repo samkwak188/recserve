@@ -28,8 +28,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ALL_STAGES = ["tests", "validate", "kernels", "pareto", "crossover", "nearline", "skew",
-              "agent", "cost"]
+ALL_STAGES = ["tests", "validate", "kernels", "pareto", "crossover", "quality", "nearline",
+              "skew", "shard", "agent", "cost"]
 QUICK = ["tests", "kernels", "pareto", "crossover"]
 
 
@@ -78,6 +78,8 @@ def main() -> int:
     ap.add_argument("--board-only", action="store_true",
                     help="regenerate COST.md from the saved results without re-measuring")
     ap.add_argument("--big-items", type=int, default=1_000_000)
+    ap.add_argument("--quality-prefix", default="",
+                    help="ml25m or mlsmall; defaults to ml25m when prepared")
     ap.add_argument("--out", default="results/measured.json")
     args = ap.parse_args()
 
@@ -88,14 +90,23 @@ def main() -> int:
         return 0
 
     stages = args.stages or (QUICK if args.quick else ALL_STAGES)
-    payload: dict = {
+    # Merge into whatever is already there. Running a single stage used to
+    # rewrite the file from scratch and silently drop every other result.
+    payload: dict = {}
+    existing = ROOT / args.out
+    if existing.exists():
+        try:
+            payload = json.loads(existing.read_text())
+        except json.JSONDecodeError:
+            payload = {}
+    payload.update({
         "host": {
             "os": platform.platform(), "machine": platform.machine(),
             "cpus": os.cpu_count(), "python": sys.version.split()[0],
             "measured_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
-        "stages_run": stages,
-    }
+        "stages_run": sorted(set(payload.get("stages_run", [])) | set(stages)),
+    })
 
     if "tests" in stages:
         print("[tests]", file=sys.stderr)
@@ -152,6 +163,40 @@ def main() -> int:
                          "ratio": b["p99_mean_us"] / a["p99_mean_us"]})
         payload["blocked_crossover"] = rows
 
+    if "quality" in stages:
+        print("[quality] real embeddings on movielens", file=sys.stderr)
+        # Prefer ml-25m when it has been prepared: ml-latest-small has 609 users,
+        # which is far too few for 64 factors, and ALS there barely separates
+        # from most-popular. The small set exists so CI can run this at all.
+        prefix = args.quality_prefix
+        if not prefix:
+            prefix = "ml25m" if (ROOT / "data" / "ml25m_catalog.bin").exists() else "mlsmall"
+        cat = ROOT / "data" / f"{prefix}_catalog.bin"
+        if not cat.exists():
+            run([sys.executable, "scripts/prep_movielens.py", "--dataset",
+                 "25m" if prefix == "ml25m" else "small",
+                 "--factors", "64" if prefix == "ml25m" else "32",
+                 "--iterations", "20" if prefix == "ml25m" else "15"], timeout=7200)
+        idx = ROOT / "data" / f"{prefix}_index.bin"
+        if not idx.exists():
+            run([str(exe("recserve_fixture")), "--in-catalog", f"data/{prefix}_catalog.bin",
+                 "--out-index", f"data/{prefix}_index.bin", "--m", "16",
+                 "--ef-construction", "200", "--build-threads", "1"], timeout=3600)
+        run([sys.executable, "scripts/eval_baselines.py", "--prefix", prefix, "--k", "10",
+             "--out", "results/quality_real.json"], timeout=3600)
+        payload["quality_real"] = json.loads(
+            (ROOT / "results" / "quality_real.json").read_text())
+        payload["quality_real"]["dataset"] = prefix
+        payload["quality_real_ef"] = [
+            json.loads(run([str(exe("recserve_eval")),
+                            "--catalog", f"data/{prefix}_catalog.bin",
+                            "--queries", f"data/{prefix}_queries.bin",
+                            "--test", f"data/{prefix}_test.csv",
+                            "--train", f"data/{prefix}_train.csv",
+                            "--index", f"data/{prefix}_index.bin",
+                            "--k", "10", "--ef", str(ef), "--json"]).strip().splitlines()[-1])
+            for ef in (16, 32, 64, 128, 256)]
+
     if "nearline" in stages:
         print("[nearline] mutex vs snapshot", file=sys.stderr)
         run([sys.executable, "scripts/nearline_ab.py", "--rates", "10000", "100000",
@@ -167,6 +212,17 @@ def main() -> int:
         run([sys.executable, "scripts/skew.py", "--n", "200000",
              "--publish-ms", "100", "1000", "5000", "30000"], timeout=1800)
         payload["skew"] = json.loads((ROOT / "results" / "skew.json").read_text())
+
+    if "shard" in stages:
+        print("[shard] tail amplification", file=sys.stderr)
+        big = ROOT / f"data/catalog_{args.big_items // 1000}k.bin"
+        rows = []
+        for n in (1, 2, 4, 8, 16, 32):
+            cmd = [str(exe("recserve_shard")), "--shards", str(n), "--k", "10",
+                   "--ef", "64", "--n", "1500", "--json"]
+            cmd += ["--catalog", str(big.relative_to(ROOT)).replace("\\", "/")] if big.exists()                 else ["--items", "200000", "--dim", "64", "--clusters", "1024"]
+            rows.append(json.loads(run(cmd, timeout=3600).strip().splitlines()[-1]))
+        payload["sharding"] = {"cores": os.cpu_count(), "rows": rows}
 
     if "agent" in stages:
         print("[agent] closed loop from a misconfigured start", file=sys.stderr)
@@ -309,6 +365,67 @@ def write_board(p: dict) -> None:
         for r in p["skew"]["rows"]:
             A(f"| {r['publish_ms']} | {r['unpublished']:,} | {r['items_differ']:,} | "
               f"{r['max_abs_ctr_delta']:.4f} | {r['mean_abs_ctr_delta']:.6f} |")
+        A("")
+
+    if "quality_real" in p:
+        q = p["quality_real"]
+        A(f"## Recommendation quality on real embeddings "
+          f"({q.get('dataset', '?')}: {q['items']:,} items, {q['eval_users']:,} users)")
+        A("")
+        A("ALS on MovieLens, per-user temporal split, items already seen in training")
+        A(f"filtered from the returned list. recall@{q['k']} ceiling is "
+          f"{q['recall_ceiling']:.3f} (mean held-out set {q['mean_gold']:.1f} items).")
+        A("")
+        A(f"| method | recall@{q['k']} | ndcg@{q['k']} |")
+        A("|---|---|---|")
+        for name, row in q["baselines"].items():
+            A(f"| {name} | {row['recall']:.4f} | {row['ndcg']:.4f} |")
+        A(f"| **served through recserve** | **{q['cpp']['recall_at_k']:.4f}** | "
+          f"**{q['cpp']['ndcg_at_k']:.4f}** |")
+        A("")
+        lift = q["als_lift_over_popularity"]
+        pop = max(q["baselines"]["most_popular"]["recall"], 1e-9)
+        A(f"ALS beats most-popular by {lift:+.4f} recall ({lift / pop * 100:+.1f}%). The C++")
+        A("service and an independent numpy implementation of the same metric agree to")
+        A(f"{abs(q['cpp']['recall_at_k'] - q['baselines']['als_exact']['recall']):.5f}.")
+        A("")
+        if "quality_real_ef" in p:
+            A("| ef | recall@10 | ndcg@10 | retrieve recall | p99 us |")
+            A("|---|---|---|---|---|")
+            for r in p["quality_real_ef"]:
+                A(f"| {r['ef']} | {r['recall_at_k']:.4f} | {r['ndcg_at_k']:.4f} | "
+                  f"{r['retrieve_recall']:.4f} | {r['p99_us']:.0f} |")
+            A("")
+            A("On trained embeddings the graph finds essentially all of the exact top-k at")
+            A("small ef. On synthetic uniform vectors the same ef reaches about half, which")
+            A("is a property of the data, not of the index.")
+            A("")
+
+    if "sharding" in p:
+        cores = p["sharding"]["cores"]
+        A(f"## Sharded retrieval: tail amplification ({cores} cores)")
+        A("")
+        A("A request finishes when its SLOWEST shard replies, so end-to-end latency is")
+        A("the maximum of N samples, not the mean (Dean & Barroso, \"The Tail at Scale\",")
+        A("CACM 56(2), 2013). Shards are threads in one process: no network, no separate")
+        A("failure domain, so this is a LOWER BOUND on what a real deployment would see.")
+        A("")
+        A("| shards | items/shard | shard p99 us | e2e p99 us | merge p99 us | amplification | recall@10 |")
+        A("|---|---|---|---|---|---|---|")
+        for r in p["sharding"]["rows"]:
+            flag = " *" if r["shards"] > cores else ""
+            A(f"| {r['shards']}{flag} | {r['items_per_shard']:,} | {r['shard_p99_us']:.0f} | "
+              f"{r['e2e_p99_us']:.0f} | {r['merge_p99_us']:.0f} | "
+              f"{r['tail_amplification']:.2f}x | {r['recall_vs_exact']:.4f} |")
+        A("")
+        A(r"\* more shards than cores: those rows include CPU queueing on top of the")
+        A("structural tail effect, so read them as an upper bound rather than as a")
+        A("clean measurement of amplification.")
+        A("")
+        A("Recall rises with shard count because each shard searches its own smaller")
+        A("graph at the same ef and every shard contributes its own top-k, so total")
+        A("candidates examined scales with N. Sharding buys accuracy and costs tail")
+        A("latency; that trade is the actual decision, not whether scatter-gather works.")
         A("")
 
     if "agent" in p:

@@ -1,116 +1,644 @@
 {
   "workload": {
-    "items": 16384,
+    "items": 65536,
     "dim": 64,
-    "clusters": 256,
-    "n": 400,
+    "clusters": 1024,
+    "n": 2000,
     "k": 10,
-    "trials": 3,
+    "trials": 5,
     "warmup": 64,
-    "recall_probe": 32,
-    "catalog": "",
-    "index": ""
+    "recall_probe": 128,
+    "catalog": "data/catalog_64k.bin",
+    "index": "data/index_64k.bin"
   },
   "runs": [
     {
       "planner": "heuristic",
       "provider": null,
-      "iterations": 3,
+      "iterations": 12,
       "seed": 1,
-      "baseline_p99_us": 88.6833,
-      "baseline_recall": 0.790625,
-      "best_p99_us": 86.85,
-      "best_recall": 0.78125,
-      "first_baseline_p99_us": 56.0067,
+      "baseline_p99_us": 641.448,
+      "baseline_recall": 0.878125,
+      "best_p99_us": 248.03,
+      "best_recall": 0.875781,
+      "first_baseline_p99_us": 665.42,
       "final_confirmed": true,
-      "final_confirm_reason": "no change from start; improvement is 0 by definition",
+      "final_confirm_reason": "p99 641.4 -> 248.0 us (+393.4, noise 19.5)",
       "start_config": {
-        "ef": 64,
-        "retrieve_k": 64,
-        "kernel": "simd",
+        "ef": 256,
+        "retrieve_k": 128,
+        "kernel": "scalar",
         "pin": 0
       },
       "best_config": {
-        "ef": 64,
-        "retrieve_k": 64,
+        "ef": 256,
+        "retrieve_k": 128,
+        "kernel": "int8",
+        "pin": 0
+      },
+      "improvement_frac": 0.6133279704668189,
+      "accepted": 2,
+      "rejected": 10,
+      "recall_floor": 0.8605625,
+      "rss_budget_mib": 48.891625000000005,
+      "calibration": {
+        "p99_mean_us": 121.7916,
+        "p99_sd_us": 6.907640610222851,
+        "cv": 0.05671688860498467,
+        "detect_floor_frac": 0.16041958616154675,
+        "samples": [
+          124.462,
+          119.614,
+          111.034,
+          129.224,
+          124.624
+        ]
+      },
+      "detect_floor_frac": 0.16041958616154675,
+      "wall_s": 70.60208270000294
+    },
+    {
+      "planner": "random",
+      "provider": null,
+      "iterations": 12,
+      "seed": 1,
+      "baseline_p99_us": 651.864,
+      "baseline_recall": 0.878125,
+      "best_p99_us": 403.676,
+      "best_recall": 0.878125,
+      "first_baseline_p99_us": 655.43,
+      "final_confirmed": true,
+      "final_confirm_reason": "p99 651.9 -> 403.7 us (+248.2, noise 24.0)",
+      "start_config": {
+        "ef": 256,
+        "retrieve_k": 128,
+        "kernel": "scalar",
+        "pin": 0
+      },
+      "best_config": {
+        "ef": 256,
+        "retrieve_k": 128,
         "kernel": "simd",
+        "pin": 0
+      },
+      "improvement_frac": 0.3807358590135366,
+      "accepted": 1,
+      "rejected": 11,
+      "recall_floor": 0.8605625,
+      "rss_budget_mib": 48.881875,
+      "calibration": {
+        "p99_mean_us": 117.46039999999999,
+        "p99_sd_us": 8.499786514966123,
+        "cv": 0.0723629965074708,
+        "detect_floor_frac": 0.20467346214964427,
+        "samples": [
+          131.218,
+          119.42,
+          112.226,
+          114.82,
+          109.618
+        ]
+      },
+      "detect_floor_frac": 0.20467346214964427,
+      "wall_s": 88.36548750000657
+    },
+    {
+      "planner": "grid",
+      "provider": null,
+      "iterations": 12,
+      "seed": 1,
+      "baseline_p99_us": 589.456,
+      "baseline_recall": 0.878125,
+      "best_p99_us": 577.662,
+      "best_recall": 0.878125,
+      "first_baseline_p99_us": 659.216,
+      "final_confirmed": true,
+      "final_confirm_reason": "no change from start; improvement is 0 by definition",
+      "start_config": {
+        "ef": 256,
+        "retrieve_k": 128,
+        "kernel": "scalar",
+        "pin": 0
+      },
+      "best_config": {
+        "ef": 256,
+        "retrieve_k": 128,
+        "kernel": "scalar",
         "pin": 0
       },
       "improvement_frac": 0.0,
       "accepted": 0,
-      "rejected": 3,
-      "recall_floor": 0.802375,
-      "rss_budget_mib": 26.494125,
+      "rejected": 12,
+      "recall_floor": 0.8605625,
+      "rss_budget_mib": 48.725625,
       "calibration": {
-        "p99_mean_us": 64.14776666666667,
-        "p99_sd_us": 9.792199132642953,
-        "cv": 0.15265066332747806,
-        "detect_floor_frac": 0.43176127676593745,
+        "p99_mean_us": 118.9396,
+        "p99_sd_us": 7.298940251844782,
+        "cv": 0.06136677987688526,
+        "detect_floor_frac": 0.17357146476211094,
         "samples": [
-          74.7167,
-          62.3433,
-          55.3833
+          122.624,
+          110.82,
+          129.618,
+          116.016,
+          115.62
         ]
       },
-      "detect_floor_frac": 0.43176127676593745,
-      "wall_s": 6.887626999989152
+      "detect_floor_frac": 0.17357146476211094,
+      "wall_s": 107.01315859999158
     }
   ],
   "traces": {
     "heuristic": [
       {
         "iteration": 0,
-        "p99_mean_us": 56.0067,
-        "response_recall": 0.81875,
-        "retrieve_recall": 0.81875,
+        "p99_mean_us": 665.42,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
         "accepted": true,
         "config": {
-          "ef": 64,
-          "retrieve_k": 64,
-          "kernel": "simd",
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
           "pin": 0
         }
       },
       {
         "iteration": 1,
-        "p99_mean_us": 77.7067,
-        "incumbent_p99_us": 59.0167,
-        "response_recall": 0.796875,
-        "retrieve_recall": 0.721875,
+        "p99_mean_us": 535.448,
+        "incumbent_p99_us": 665.028,
+        "response_recall": 0.824219,
+        "retrieve_recall": 0.824219,
         "accepted": false,
         "config": {
-          "ef": 48,
-          "retrieve_k": 64,
-          "kernel": "simd",
+          "ef": 192,
+          "retrieve_k": 128,
+          "kernel": "scalar",
           "pin": 0
         }
       },
       {
         "iteration": 2,
-        "p99_mean_us": 111.06,
-        "incumbent_p99_us": 77.6933,
-        "response_recall": 0.853125,
-        "retrieve_recall": 0.853125,
-        "accepted": false,
+        "p99_mean_us": 388.22,
+        "incumbent_p99_us": 653.634,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": true,
         "config": {
-          "ef": 96,
-          "retrieve_k": 64,
+          "ef": 256,
+          "retrieve_k": 128,
           "kernel": "simd",
           "pin": 0
         }
       },
       {
         "iteration": 3,
-        "p99_mean_us": 65.67,
-        "incumbent_p99_us": 105.047,
-        "response_recall": 0.796875,
-        "retrieve_recall": 0.796875,
+        "p99_mean_us": 655.84,
+        "incumbent_p99_us": 386.612,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 4,
+        "p99_mean_us": 376.23,
+        "incumbent_p99_us": 370.81,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "blocked",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 5,
+        "p99_mean_us": 247.826,
+        "incumbent_p99_us": 371.032,
+        "response_recall": 0.875781,
+        "retrieve_recall": 0.875781,
+        "accepted": true,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 6,
+        "p99_mean_us": 134.426,
+        "incumbent_p99_us": 224.814,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.227344,
+        "accepted": false,
+        "config": {
+          "ef": 16,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 7,
+        "p99_mean_us": 144.622,
+        "incumbent_p99_us": 226.412,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.323438,
+        "accepted": false,
+        "config": {
+          "ef": 24,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 8,
+        "p99_mean_us": 127.022,
+        "incumbent_p99_us": 242.42,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.374219,
+        "accepted": false,
+        "config": {
+          "ef": 32,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 9,
+        "p99_mean_us": 141.604,
+        "incumbent_p99_us": 258.608,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.465625,
+        "accepted": false,
+        "config": {
+          "ef": 48,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 10,
+        "p99_mean_us": 134.05,
+        "incumbent_p99_us": 224.614,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.534375,
         "accepted": false,
         "config": {
           "ef": 64,
-          "retrieve_k": 64,
-          "kernel": "simd",
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 11,
+        "p99_mean_us": 127.806,
+        "incumbent_p99_us": 260.608,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.632812,
+        "accepted": false,
+        "config": {
+          "ef": 96,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 12,
+        "p99_mean_us": 124.61,
+        "incumbent_p99_us": 233.226,
+        "response_recall": 0.710938,
+        "retrieve_recall": 0.710938,
+        "accepted": false,
+        "config": {
+          "ef": 128,
+          "retrieve_k": 128,
+          "kernel": "int8",
+          "pin": 0
+        }
+      }
+    ],
+    "random": [
+      {
+        "iteration": 0,
+        "p99_mean_us": 655.43,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": true,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 1,
+        "p99_mean_us": 648.426,
+        "incumbent_p99_us": 653.048,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 16,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 3,
+        "p99_mean_us": 658.036,
+        "incumbent_p99_us": 650.876,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
           "pin": 1
+        }
+      },
+      {
+        "iteration": 4,
+        "p99_mean_us": 664.614,
+        "incumbent_p99_us": 663.416,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 1
+        }
+      },
+      {
+        "iteration": 5,
+        "p99_mean_us": 663.038,
+        "incumbent_p99_us": 651.434,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 16,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 7,
+        "p99_mean_us": 660.416,
+        "incumbent_p99_us": 667.638,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 1
+        }
+      },
+      {
+        "iteration": 8,
+        "p99_mean_us": 528.642,
+        "incumbent_p99_us": 645.822,
+        "response_recall": 0.824219,
+        "retrieve_recall": 0.824219,
+        "accepted": false,
+        "config": {
+          "ef": 192,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 9,
+        "p99_mean_us": 379.426,
+        "incumbent_p99_us": 655.616,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": true,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "simd",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 10,
+        "p99_mean_us": 215.012,
+        "incumbent_p99_us": 373.634,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.634375,
+        "accepted": false,
+        "config": {
+          "ef": 96,
+          "retrieve_k": 128,
+          "kernel": "simd",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 11,
+        "p99_mean_us": 214.804,
+        "incumbent_p99_us": 376.652,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.235156,
+        "accepted": false,
+        "config": {
+          "ef": 16,
+          "retrieve_k": 128,
+          "kernel": "simd",
+          "pin": 0
+        }
+      }
+    ],
+    "grid": [
+      {
+        "iteration": 0,
+        "p99_mean_us": 659.216,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": true,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 1,
+        "p99_mean_us": 368.232,
+        "incumbent_p99_us": 656.222,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.235156,
+        "accepted": false,
+        "config": {
+          "ef": 16,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 2,
+        "p99_mean_us": 404.64,
+        "incumbent_p99_us": 668.622,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.328906,
+        "accepted": false,
+        "config": {
+          "ef": 24,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 3,
+        "p99_mean_us": 392.228,
+        "incumbent_p99_us": 676.626,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.379688,
+        "accepted": false,
+        "config": {
+          "ef": 32,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 4,
+        "p99_mean_us": 394.024,
+        "incumbent_p99_us": 691.014,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.467969,
+        "accepted": false,
+        "config": {
+          "ef": 48,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 5,
+        "p99_mean_us": 328.046,
+        "incumbent_p99_us": 696.66,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.545312,
+        "accepted": false,
+        "config": {
+          "ef": 64,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 6,
+        "p99_mean_us": 327.442,
+        "incumbent_p99_us": 582.236,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.634375,
+        "accepted": false,
+        "config": {
+          "ef": 96,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 7,
+        "p99_mean_us": 332.46,
+        "incumbent_p99_us": 581.428,
+        "response_recall": 0.7125,
+        "retrieve_recall": 0.7125,
+        "accepted": false,
+        "config": {
+          "ef": 128,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 8,
+        "p99_mean_us": 477.826,
+        "incumbent_p99_us": 597.42,
+        "response_recall": 0.824219,
+        "retrieve_recall": 0.824219,
+        "accepted": false,
+        "config": {
+          "ef": 192,
+          "retrieve_k": 128,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 10,
+        "p99_mean_us": 580.292,
+        "incumbent_p99_us": 601.84,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 10,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 11,
+        "p99_mean_us": 615.644,
+        "incumbent_p99_us": 569.232,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 16,
+          "kernel": "scalar",
+          "pin": 0
+        }
+      },
+      {
+        "iteration": 12,
+        "p99_mean_us": 600.434,
+        "incumbent_p99_us": 612.032,
+        "response_recall": 0.878125,
+        "retrieve_recall": 0.878125,
+        "accepted": false,
+        "config": {
+          "ef": 256,
+          "retrieve_k": 24,
+          "kernel": "scalar",
+          "pin": 0
         }
       }
     ]
