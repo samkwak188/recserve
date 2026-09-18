@@ -12,7 +12,10 @@ using UserId = std::uint32_t;
 using RequestId = std::uint64_t;
 
 inline constexpr std::uint32_t kProtocolMagic = 0x52535631u;  // RSV1
-inline constexpr std::uint32_t kMaxK = 64;
+// Upper bound on items in one response. Raised from 64 so evaluation can ask
+// for k plus a user's already-seen items and filter them out afterwards, which
+// is what a real ranker does before the list reaches a user.
+inline constexpr std::uint32_t kMaxK = 512;
 inline constexpr std::uint32_t kDefaultDim = 64;
 inline constexpr std::uint32_t kDefaultRetrieveK = 200;
 

@@ -28,25 +28,38 @@ struct ItemFeatures {
 // Flat open-addressing map for user features (Stage B optimization vs unordered_map).
 class FlatUserMap {
  public:
+  static constexpr std::uint32_t kEmpty = 0xFFFFFFFFu;
+
   void clear_and_reserve(int n) {
     cap_ = 1;
     while (cap_ < n * 2 + 8) cap_ *= 2;
-    keys_.assign(cap_, 0xFFFFFFFFu);
-    vals_.assign(cap_, {});
+    keys_.assign(static_cast<std::size_t>(cap_), kEmpty);
+    vals_.assign(static_cast<std::size_t>(cap_), {});
+    size_ = 0;
   }
 
+  // Grows instead of spinning. The previous version probed with `for (;;)` and
+  // no load factor, so once the table filled -- which happens as soon as more
+  // distinct user ids arrive than were reserved -- an insert became an infinite
+  // loop inside the request path. A serving component must not hang on an
+  // unexpected key.
   UserFeatures& get(UserId u) {
-    std::uint32_t mask = static_cast<std::uint32_t>(cap_ - 1);
+    if (cap_ == 0) clear_and_reserve(16);
+    if (size_ * 4 >= static_cast<std::size_t>(cap_) * 3) grow();
+    const std::uint32_t mask = static_cast<std::uint32_t>(cap_ - 1);
     std::uint32_t i = (u * 2654435761u) & mask;
-    for (;;) {
-      if (keys_[i] == 0xFFFFFFFFu) {
+    for (int probe = 0; probe < cap_; ++probe) {
+      if (keys_[i] == kEmpty) {
         keys_[i] = u;
         vals_[i] = UserFeatures{};
+        ++size_;
         return vals_[i];
       }
       if (keys_[i] == u) return vals_[i];
       i = (i + 1) & mask;
     }
+    grow();  // table was full despite the load factor: rehash and retry once
+    return get(u);
   }
 
   const UserFeatures* find(UserId u) const {
@@ -54,7 +67,7 @@ class FlatUserMap {
     std::uint32_t mask = static_cast<std::uint32_t>(cap_ - 1);
     std::uint32_t i = (u * 2654435761u) & mask;
     for (int s = 0; s < cap_; ++s) {
-      if (keys_[i] == 0xFFFFFFFFu) return nullptr;
+      if (keys_[i] == kEmpty) return nullptr;
       if (keys_[i] == u) return &vals_[i];
       i = (i + 1) & mask;
     }
@@ -62,7 +75,27 @@ class FlatUserMap {
   }
 
  private:
+  void grow() {
+    const std::vector<std::uint32_t> old_keys = keys_;
+    const std::vector<UserFeatures> old_vals = vals_;
+    const int old_cap = cap_;
+    cap_ = std::max(16, old_cap * 2);
+    keys_.assign(static_cast<std::size_t>(cap_), kEmpty);
+    vals_.assign(static_cast<std::size_t>(cap_), {});
+    size_ = 0;
+    const std::uint32_t mask = static_cast<std::uint32_t>(cap_ - 1);
+    for (int j = 0; j < old_cap; ++j) {
+      if (old_keys[static_cast<std::size_t>(j)] == kEmpty) continue;
+      std::uint32_t i = (old_keys[static_cast<std::size_t>(j)] * 2654435761u) & mask;
+      while (keys_[i] != kEmpty) i = (i + 1) & mask;
+      keys_[i] = old_keys[static_cast<std::size_t>(j)];
+      vals_[i] = old_vals[static_cast<std::size_t>(j)];
+      ++size_;
+    }
+  }
+
   int cap_ = 0;
+  std::size_t size_ = 0;
   std::vector<std::uint32_t> keys_;
   std::vector<UserFeatures> vals_;
 };

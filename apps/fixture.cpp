@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
   int build_threads = 0, n_queries = 4096;
   unsigned seed = 13;
   std::string out_catalog = "data/catalog.bin", out_index = "data/index.bin", out_queries;
+  std::string in_catalog;
   bool skip_index = false;
 
   for (int i = 1; i < argc; ++i) {
@@ -32,6 +33,7 @@ int main(int argc, char** argv) {
     else if (a == "--out-catalog" && i + 1 < argc) out_catalog = argv[++i];
     else if (a == "--out-index" && i + 1 < argc) out_index = argv[++i];
     else if (a == "--out-queries" && i + 1 < argc) out_queries = argv[++i];
+    else if (a == "--in-catalog" && i + 1 < argc) in_catalog = argv[++i];
     else if (a == "--no-index") skip_index = true;
   }
 
@@ -42,12 +44,30 @@ int main(int argc, char** argv) {
   e.cfg.ef_construction = ef_construction;
   e.cfg.build_threads = build_threads;
 
-  std::cerr << "generating " << items << " x " << dim << " (clusters=" << clusters << ")\n";
-  e.init_random(items, n_queries, dim, seed, clusters);
+  if (!in_catalog.empty()) {
+    // Build an index over a catalog that already exists (trained ALS item
+    // factors, say) instead of generating one. The index is written to disk so
+    // every later measurement uses the same graph: the parallel build is
+    // order-dependent, so rebuilding per run would put that spread underneath
+    // every recall comparison.
+    std::cerr << "building an index over " << in_catalog << "\n";
+    if (!e.load_fixture(in_catalog, "", n_queries, seed)) {
+      std::cerr << "failed to load " << in_catalog << "\n";
+      return 1;
+    }
+    items = e.cat.n;
+    dim = e.cat.dim;
+    out_catalog = in_catalog;
+  } else {
+    std::cerr << "generating " << items << " x " << dim << " (clusters=" << clusters
+              << ")\n";
+    e.init_random(items, n_queries, dim, seed, clusters);
+  }
 
   const auto p = std::filesystem::path(out_catalog).parent_path();
   if (!p.empty()) std::filesystem::create_directories(p);
-  if (!e.cat.save(out_catalog)) {
+  // An input catalog is already on disk; do not rewrite it.
+  if (in_catalog.empty() && !e.cat.save(out_catalog)) {
     std::cerr << "catalog save failed\n";
     return 1;
   }

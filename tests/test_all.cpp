@@ -328,6 +328,21 @@ static void test_nearline_freshness_and_fault() {
 
 // The RCU snapshot must never let a reader observe a torn or half-applied
 // generation while the writer is publishing into the other buffer.
+// Reserving for n users and then seeing many more than n must not hang. This
+// spun forever in the request path before FlatUserMap learned to grow.
+static void test_flat_user_map_grows_past_reservation() {
+  FeatureStore store;
+  store.init(/*n_users=*/1, /*n_items=*/8, /*flat=*/true);
+  for (int u = 0; u < 5000; ++u) {
+    store.apply_event(1000 + static_cast<std::uint64_t>(u), static_cast<UserId>(u),
+                      static_cast<ItemId>(u % 8), u % 3 == 0 ? 1 : 0);
+  }
+  for (int u = 0; u < 5000; u += 97) {
+    CHECK(store.freshness_ms(100000, static_cast<UserId>(u)) ==
+          100000 - (1000 + static_cast<std::uint64_t>(u)));
+  }
+}
+
 static void test_snapshot_rcu_concurrency() {
   FeatureSnapshotStore store;
   const int n_items = 512;
@@ -486,6 +501,7 @@ int main() {
     test_index_and_catalog_roundtrip();
     test_all_kernels_end_to_end();
     test_nearline_freshness_and_fault();
+    test_flat_user_map_grows_past_reservation();
     test_snapshot_rcu_concurrency();
     test_sliding_window_ctr();
     test_nearline_pipeline_publishes();

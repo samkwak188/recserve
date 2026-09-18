@@ -1,0 +1,43 @@
+{
+  "prefix": "ml25m",
+  "k": 10,
+  "items": 40858,
+  "dim": 64,
+  "eval_users": 4096,
+  "mean_gold": 15.32666015625,
+  "recall_ceiling": 0.652457867405779,
+  "baselines": {
+    "random": {
+      "recall": 0.0002761774505243052,
+      "ndcg": 0.0005737267885067112
+    },
+    "most_popular": {
+      "recall": 0.05031970171144741,
+      "ndcg": 0.06299934912019031
+    },
+    "als_exact": {
+      "recall": 0.0719817638501513,
+      "ndcg": 0.07390930304458099
+    }
+  },
+  "als_lift_over_popularity": 0.02166206213870389,
+  "cpp": {
+    "users": 4096,
+    "skipped": 0,
+    "k": 10,
+    "items": 40858,
+    "dim": 64,
+    "kernel": "simd",
+    "ef": 16,
+    "retrieve_k": 256,
+    "brute": 0,
+    "recall_at_k": 0.0713808,
+    "ndcg_at_k": 0.0735785,
+    "retrieve_recall": 0.99458,
+    "filtered_seen": 31611,
+    "p50_us": 89,
+    "p99_us": 198.05,
+    "rss_mib": 30.2852
+  },
+  "cpp_mode": "HNSW ef=16"
+}

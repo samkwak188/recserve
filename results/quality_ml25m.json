@@ -1,0 +1,43 @@
+{
+  "prefix": "ml25m",
+  "k": 10,
+  "items": 40858,
+  "dim": 64,
+  "eval_users": 4096,
+  "mean_gold": 15.32666015625,
+  "recall_ceiling": 0.652457867405779,
+  "baselines": {
+    "random": {
+      "recall": 0.0002761774505243052,
+      "ndcg": 0.0005737267885067112
+    },
+    "most_popular": {
+      "recall": 0.05031970171144741,
+      "ndcg": 0.06299934912019031
+    },
+    "als_exact": {
+      "recall": 0.0719817638501513,
+      "ndcg": 0.07390930304458099
+    }
+  },
+  "als_lift_over_popularity": 0.02166206213870389,
+  "cpp": {
+    "users": 4096,
+    "skipped": 0,
+    "k": 10,
+    "items": 40858,
+    "dim": 64,
+    "kernel": "simd",
+    "ef": 128,
+    "retrieve_k": 256,
+    "brute": 1,
+    "recall_at_k": 0.0719818,
+    "ndcg_at_k": 0.0739093,
+    "retrieve_recall": 1,
+    "filtered_seen": 31747,
+    "p50_us": 288,
+    "p99_us": 405.05,
+    "rss_mib": 22.2422
+  },
+  "cpp_mode": "exact scan"
+}

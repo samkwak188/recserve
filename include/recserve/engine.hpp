@@ -119,6 +119,28 @@ class Engine {
     return true;
   }
 
+  // Replace the synthetic query set with real vectors (e.g. ALS user factors).
+  bool load_queries(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return false;
+    std::uint32_t magic = 0;
+    int nq = 0, d = 0;
+    in.read(reinterpret_cast<char*>(&magic), 4);
+    in.read(reinterpret_cast<char*>(&nq), 4);
+    in.read(reinterpret_cast<char*>(&d), 4);
+    if (!in || magic != 0x51525931u || nq <= 0 || d != cfg.dim) return false;
+    user_queries_.assign(static_cast<std::size_t>(nq) * d, 0.f);
+    in.read(reinterpret_cast<char*>(user_queries_.data()),
+            static_cast<std::streamsize>(user_queries_.size() * sizeof(float)));
+    if (!in) return false;
+    n_user_queries_ = nq;
+    cfg.n_users = nq;
+    // The feature store was sized for whatever n_users the fixture was loaded
+    // with; resize it for the real query set now that the count is known.
+    features.init(nq, cat.n, cfg.use_flat_features);
+    return true;
+  }
+
   const float* user_query(UserId u) const {
     if (user_queries_.empty()) return nullptr;
     return user_queries_.data() + static_cast<std::size_t>(u % n_user_queries_) * cfg.dim;

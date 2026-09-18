@@ -200,3 +200,40 @@ jobs:
       - name: flink output must equal the reference exactly
         run: |
           python scripts/compare_flink.py --flink data/offline/flink_ctr             --reference data/offline/offline_ctr.csv
+
+  # Real embeddings, not synthetic vectors. Trains ALS on MovieLens, serves the
+  # item factors through the actual request path, and cross-checks the C++
+  # result against an independent numpy implementation. Without this the recall
+  # numbers describe high-dimensional geometry rather than recommendation
+  # quality, and nothing verifies that the serving path computes what the
+  # offline evaluation thinks it computes.
+  quality-real-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy scipy implicit pandas certifi
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
+      - name: train ALS on movielens
+        run: python scripts/prep_movielens.py --dataset small --factors 32 --iterations 15
+      - name: build an index over the trained catalog
+        run: |
+          ./build/recserve_fixture --in-catalog data/mlsmall_catalog.bin             --out-index data/mlsmall_index.bin --m 16 --ef-construction 200 --build-threads 1
+      - name: baselines and C++/numpy cross-check
+        # The exact-scan path must reproduce numpy to within 0.002 recall. A
+        # mismatch means the service is not computing what the evaluation says.
+        run: python scripts/eval_baselines.py --prefix mlsmall --k 10 --max-cpp-delta 0.002
+      - name: HNSW must find nearly all of the exact top-k on real embeddings
+        run: |
+          ./build/recserve_eval --catalog data/mlsmall_catalog.bin             --queries data/mlsmall_queries.bin --test data/mlsmall_test.csv             --train data/mlsmall_train.csv --index data/mlsmall_index.bin             --k 10 --ef 64 --json | tee /tmp/quality.json
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("/tmp/quality.json"))
+          print(json.dumps(d, indent=2))
+          # Real embedding tables have low intrinsic dimension, so the graph
+          # should find essentially all of the exact top-k at a modest ef. On
+          # synthetic uniform vectors the same ef reaches barely half.
+          if d["retrieve_recall"] < 0.95:
+              sys.exit(f"retrieve_recall {d['retrieve_recall']:.4f} < 0.95 on real embeddings")
+          PY

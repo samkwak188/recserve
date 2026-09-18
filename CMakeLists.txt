@@ -48,6 +48,7 @@ recserve_app(recserve_soak apps/soak.cpp)
 recserve_app(recserve_rankd apps/rankd.cpp)
 recserve_app(recserve_diagnose apps/diagnose.cpp)
 recserve_app(recserve_fixture apps/fixture.cpp)
+recserve_app(recserve_eval apps/eval.cpp)
 
 enable_testing()
 # Run from the source tree so fixtures under data/ resolve the same way they

@@ -1,0 +1,19 @@
+{
+  "dataset": "small",
+  "factors": 64,
+  "iterations": 20,
+  "regularization": 0.05,
+  "alpha": 40.0,
+  "min_rating": 4.0,
+  "test_frac": 0.2,
+  "n_users": 609,
+  "n_items": 6298,
+  "train_interactions": 39129,
+  "test_interactions": 9451,
+  "eval_users": 579,
+  "eval_test_interactions": 9451,
+  "catalog": "mlsmall_catalog.bin",
+  "queries": "mlsmall_queries.bin",
+  "test": "mlsmall_test.csv",
+  "train_csv": "mlsmall_train.csv"
+}

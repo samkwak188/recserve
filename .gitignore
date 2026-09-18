@@ -17,3 +17,7 @@ compile_commands.json
 __pycache__/
 *.pyc
 .DS_Store
+data/movielens/
+data/offline/
+data/*.csv
+!data/quality_fixture.csv
