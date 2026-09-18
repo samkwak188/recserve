@@ -31,12 +31,9 @@
 
 using namespace recserve;
 
-static std::uint64_t wall_ms() {
-  return static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count());
-}
+// Same epoch the producer stamps with, so freshness (publish_time -
+// event_time) is a real quantity across the process boundary.
+static std::uint64_t wall_ms() { return now_ms_epoch(); }
 
 int main(int argc, char** argv) {
   std::string source = "file", events_path = "data/events.bin", store_kind = "snapshot";
@@ -174,7 +171,7 @@ int main(int argc, char** argv) {
   // fixture file. A Kafka producer stamps real times and this does nothing.
   std::thread ingest([&]() {
     const auto t_start = wall_ms();
-    std::vector<EventRecord> buf(512);
+    std::vector<EventRecord> buf(4096);
     std::uint64_t produced = 0;
     while (!stop.load(std::memory_order_relaxed)) {
       const std::uint64_t now = wall_ms();

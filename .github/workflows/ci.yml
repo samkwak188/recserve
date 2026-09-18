@@ -132,7 +132,7 @@ jobs:
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_RDKAFKA=ON
           cmake --build build -j 4
       - name: produce
-        run: python scripts/kafka_produce.py --broker 127.0.0.1:9092 --n 50000 --rate 25000 --items 4096
+        run: python scripts/kafka_produce.py --broker 127.0.0.1:9092 --n 50000 --rate 25000 --items 4096 --dump /tmp/produced.bin
       - name: consume into the feature snapshot
         run: |
           ./build/recserve_nearline --source kafka --brokers 127.0.0.1:9092 \
@@ -144,8 +144,59 @@ jobs:
           print(json.dumps(d, indent=2))
           if d["source"] != "kafka":
               sys.exit("fell back off the kafka source")
-          if d["ingested"] < 1000:
-              sys.exit(f"consumed only {d['ingested']} records")
           if d["source_errors"]:
               sys.exit(f"{d['source_errors']} decode errors on the topic")
+          # The whole 50k topic must be drained. Before the lag refresh was moved
+          # off the hot path this consumed ~11k of 50k and reported the backlog it
+          # had caused itself as consumer lag.
+          if d["ingested"] < 49000:
+              sys.exit(f"consumed only {d['ingested']} of 50000 records")
+          # Deliberately NOT asserting on ingest_eps: the consumer drains the
+          # backlog in the first couple of seconds and then idles, so the mean
+          # over a 10 s window understates throughput. Draining the topic and
+          # ending at near-zero lag is the assertion that means something.
+          # Freshness must be a real measurement. It read exactly 0 while the
+          # consumer compared a steady_clock reading against the producer's
+          # wall-clock stamp, so 0 is the failure signature, not a good result.
+          if not (0 < d["freshness_p99_ms"] < 60000):
+              sys.exit(f"freshness_p99_ms={d['freshness_p99_ms']} is not a real measurement")
+          if d["consumer_lag"] > 100:
+              sys.exit(f"consumer lag {d['consumer_lag']} left unconsumed")
+          print("kafka path verified: drained the topic, freshness and lag are real")
           PY
+
+  # Runs the actual Flink job on a real Flink runtime against a real broker, and
+  # asserts its output equals the independent Python reference on byte-identical
+  # records. Without this the Flink job is a file, not a capability.
+  flink-job:
+    runs-on: ubuntu-latest
+    services:
+      redpanda:
+        image: docker.redpanda.com/redpandadata/redpanda:v24.2.11
+        ports: ["9092:9092"]
+        options: >-
+          --health-cmd "rpk cluster health | grep -q 'Healthy:.*true'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "11" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.10" }
+      - name: install pyflink and the kafka connector
+        run: |
+          pip install "apache-flink==1.20.0" kafka-python
+          curl -fsSLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.3.0-1.20/flink-sql-connector-kafka-3.3.0-1.20.jar
+          ls -l flink-sql-connector-kafka-3.3.0-1.20.jar
+      - name: produce the same records to kafka and to a file
+        run: |
+          python scripts/kafka_produce.py --broker 127.0.0.1:9092 --n 20000             --rate 20000 --items 2048 --dump /tmp/flink_events.bin
+      - name: run the flink job
+        run: |
+          python flink/ctr_aggregate.py --brokers 127.0.0.1:9092             --jar file://$PWD/flink-sql-connector-kafka-3.3.0-1.20.jar             --out data/offline/flink_ctr
+      - name: python reference over the identical records
+        run: |
+          python scripts/offline_ctr.py --events /tmp/flink_events.bin             --out data/offline/offline_ctr.csv
+      - name: flink output must equal the reference exactly
+        run: |
+          python scripts/compare_flink.py --flink data/offline/flink_ctr             --reference data/offline/offline_ctr.csv

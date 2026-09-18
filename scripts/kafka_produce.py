@@ -54,6 +54,10 @@ def main() -> None:
     p.add_argument("--rate", type=int, default=20_000, help="events/s; 0 = unthrottled")
     p.add_argument("--zipf", type=float, default=1.0, help="0 = uniform")
     p.add_argument("--seed", type=int, default=7)
+    p.add_argument("--dump", default="",
+                   help="also write the exact records sent, as a 17-byte binary log. "
+                        "This is what makes the Flink-vs-reference comparison a comparison "
+                        "of two implementations rather than of two datasets.")
     args = p.parse_args()
 
     rng = random.Random(args.seed)
@@ -62,6 +66,7 @@ def main() -> None:
 
     import bisect
 
+    dump = open(args.dump, "wb") if args.dump else None
     t0 = time.perf_counter()
     for i in range(args.n):
         if cdf is None:
@@ -76,6 +81,8 @@ def main() -> None:
             1 if rng.randrange(7) == 0 else 0,
         )
         prod.send(args.topic, rec)
+        if dump is not None:
+            dump.write(rec)
 
         if args.rate > 0 and (i & 511) == 0:
             target = i / args.rate
@@ -84,6 +91,8 @@ def main() -> None:
                 time.sleep(drift)
 
     prod.flush()
+    if dump is not None:
+        dump.close()
     elapsed = time.perf_counter() - t0
     print(f"sent {args.n} records to {args.topic}@{args.broker} "
           f"in {elapsed:.2f}s ({args.n / elapsed:.0f} eps)", file=sys.stderr)

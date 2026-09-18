@@ -33,6 +33,8 @@ class KafkaEventSource : public EventSource {
   std::size_t poll(EventRecord* out, std::size_t max, int timeout_ms) override {
     std::size_t n = 0;
     while (n < max) {
+      // Block only while the batch is empty; once it has something, keep
+      // draining whatever librdkafka has already fetched, then return.
       std::unique_ptr<RdKafka::Message> msg(consumer_->consume(n == 0 ? timeout_ms : 0));
       const RdKafka::ErrorCode err = msg->err();
       if (err == RdKafka::ERR__TIMED_OUT || err == RdKafka::ERR__PARTITION_EOF) break;
@@ -51,27 +53,46 @@ class KafkaEventSource : public EventSource {
     stats_.consumed += n;
     stats_.bytes += n * kEventBytes;
     stats_.offset = last_offset_;
-    if (n) refresh_lag();
+    maybe_refresh_lag();
     return n;
   }
 
   const char* name() const override { return "kafka"; }
 
  private:
-  void refresh_lag() {
+  // query_watermark_offsets is a synchronous round trip to the broker. Calling
+  // it once per consumed batch put a blocking metadata RPC in the ingest hot
+  // loop and held throughput to ~1.1k events/s against a 25k events/s
+  // producer, which then showed up as consumer lag the consumer had itself
+  // caused. It runs on an interval now, with a short timeout, and the last
+  // known high watermark is extrapolated between refreshes.
+  void maybe_refresh_lag() {
     if (last_partition_ < 0) return;
+    const std::uint64_t now = now_ms_epoch();
+    if (now - last_lag_ms_ < kLagIntervalMs) {
+      if (high_watermark_ >= 0) {
+        stats_.lag = std::max<std::int64_t>(0, high_watermark_ - (last_offset_ + 1));
+      }
+      return;
+    }
+    last_lag_ms_ = now;
     std::int64_t lo = 0, hi = 0;
     const RdKafka::ErrorCode e =
-        consumer_->query_watermark_offsets(topic_, last_partition_, &lo, &hi, 1000);
+        consumer_->query_watermark_offsets(topic_, last_partition_, &lo, &hi, 50);
     if (e != RdKafka::ERR_NO_ERROR) return;
+    high_watermark_ = hi;
     // Next offset this consumer would read is last_offset_ + 1.
     stats_.lag = std::max<std::int64_t>(0, hi - (last_offset_ + 1));
   }
+
+  static constexpr std::uint64_t kLagIntervalMs = 500;
 
   std::unique_ptr<RdKafka::KafkaConsumer> consumer_;
   std::string topic_;
   std::int32_t last_partition_ = -1;
   std::int64_t last_offset_ = -1;
+  std::int64_t high_watermark_ = -1;
+  std::uint64_t last_lag_ms_ = 0;
 };
 
 }  // namespace

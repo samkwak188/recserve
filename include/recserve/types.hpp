@@ -102,6 +102,20 @@ inline std::uint64_t now_us() {
           .count());
 }
 
+// Event timestamps must share one epoch across processes, so this is
+// system_clock (Unix epoch), NOT steady_clock. steady_clock's epoch is
+// unspecified -- time since boot on Linux -- so comparing a consumer's
+// steady_clock reading against a producer's wall-clock stamp silently produced
+// a meaningless freshness number that a >= guard then discarded as zero.
+// Use now_us()/now_ns() for durations; use this for anything crossing a
+// process boundary.
+inline std::uint64_t now_ms_epoch() {
+  return static_cast<std::uint64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count());
+}
+
 inline std::uint64_t now_ns() {
   using clock = std::chrono::steady_clock;
   return static_cast<std::uint64_t>(
