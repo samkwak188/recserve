@@ -64,7 +64,7 @@ def main() -> int:
     ap.add_argument("--brokers", default=os.environ.get("RECSERVE_BROKERS", "127.0.0.1:19092"))
     ap.add_argument("--topic", default="interactions")
     ap.add_argument("--group", default="recserve-flink-ctr")
-    ap.add_argument("--window", default="1' HOUR", help="Flink interval literal tail")
+    ap.add_argument("--window-minutes", type=int, default=60)
     ap.add_argument("--jar", default="", help="file:// URL of flink-sql-connector-kafka")
     ap.add_argument("--out", default="data/offline/flink_ctr")
     ap.add_argument("--parallelism", type=int, default=1)
@@ -86,12 +86,14 @@ def main() -> int:
     t_env.create_temporary_function("ev_item", ev_item)
     t_env.create_temporary_function("ev_like", ev_like)
 
+    # Identifiers are quoted throughout: `views` is a reserved word in Flink's
+    # SQL dialect and an unquoted column of that name fails to parse.
     t_env.execute_sql(f"""
         CREATE TABLE interactions (
-            payload BYTES,
-            item AS ev_item(payload),
-            is_like AS ev_like(payload),
-            ts AS TO_TIMESTAMP_LTZ(ev_ms(payload), 3)
+            `payload` BYTES,
+            `item` AS ev_item(`payload`),
+            `is_like` AS ev_like(`payload`),
+            `ts` AS TO_TIMESTAMP_LTZ(ev_ms(`payload`), 3)
         ) WITH (
             'connector' = 'kafka',
             'topic' = '{args.topic}',
@@ -105,11 +107,11 @@ def main() -> int:
 
     t_env.execute_sql(f"""
         CREATE TABLE ctr_sink (
-            item INT,
-            window_start TIMESTAMP(3),
-            views BIGINT,
-            likes BIGINT,
-            ctr DOUBLE
+            `item` INT,
+            `win_start` TIMESTAMP(3),
+            `views` BIGINT,
+            `likes` BIGINT,
+            `ctr` DOUBLE
         ) WITH (
             'connector' = 'filesystem',
             'path' = '{out_dir.as_posix()}',
@@ -124,13 +126,15 @@ def main() -> int:
     result = t_env.execute_sql(f"""
         INSERT INTO ctr_sink
         SELECT
-            item,
-            CAST(window_start AS TIMESTAMP(3)) AS window_start,
-            COUNT(*) AS views,
-            SUM(CAST(is_like AS BIGINT)) AS likes,
-            CAST(SUM(CAST(is_like AS BIGINT)) AS DOUBLE) / COUNT(*) AS ctr
-        FROM TABLE(TUMBLE(TABLE interactions, DESCRIPTOR(ts), INTERVAL '{args.window}'))
-        GROUP BY item, window_start, window_end
+            `item`,
+            CAST(`window_start` AS TIMESTAMP(3)),
+            COUNT(*),
+            SUM(CAST(`is_like` AS BIGINT)),
+            CAST(SUM(CAST(`is_like` AS BIGINT)) AS DOUBLE) / COUNT(*)
+        FROM TABLE(
+            TUMBLE(TABLE interactions, DESCRIPTOR(`ts`),
+                   INTERVAL '{args.window_minutes}' MINUTE))
+        GROUP BY `item`, `window_start`, `window_end`
     """)
     result.wait()
 
