@@ -405,6 +405,13 @@ Seven jobs, all green:
 | `flink-job` | the Flink job runs and its output equals the reference exactly |
 | `quality-real-data` | ALS on MovieLens; C++ reproduces numpy; HNSW recall > 0.95 |
 
+## Working on this
+
+[`AGENTS.md`](AGENTS.md) carries the handoff notes: current verified state, how
+to set up on a new machine (the ~926 MB of fixtures are gitignored and must be
+regenerated), the next task, and the traps worth knowing before changing
+anything.
+
 ## What this does not do
 
 Stated plainly, because the gap between "written" and "verified" is where

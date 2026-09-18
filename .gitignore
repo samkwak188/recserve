@@ -21,3 +21,4 @@ data/movielens/
 data/offline/
 data/*.csv
 !data/quality_fixture.csv
+data/offline/**
