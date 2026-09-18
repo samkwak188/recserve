@@ -2,29 +2,150 @@ name: recserve
 on:
   push:
   pull_request:
+
 jobs:
-  linux:
+  # Sanitizers first: a data race in the RCU snapshot or the parallel HNSW build
+  # is the kind of bug that passes every functional test and then corrupts a
+  # feature table under load.
+  build-and-test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        sanitizer: [none, address, undefined]
+        sanitizer: [none, address, undefined, thread]
     steps:
       - uses: actions/checkout@v4
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DRECSERVE_SANITIZER=${{ matrix.sanitizer }}
-      - run: cmake --build build -j 4
-      - run: ctest --test-dir build --output-on-failure
-      - run: ./build/recserve_quality --csv data/quality_fixture.csv --k 10
-      - run: ./build/recserve_nearline --n 2000 --out data/events.bin
-      - run: ./build/recserve_soak --seconds 2 --items 512 --dim 16
-      - run: ./build/recserve_diagnose --p99 1000 --queue-p99 800 --score-p99 100
-      - if: matrix.sanitizer == 'none'
-        run: python3 scripts/perf_ci.py --bench ./build/recserve_bench --baseline /tmp/perf_baseline.json --write-baseline --items 512 --n 150
-  tsan:
+      - name: configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DRECSERVE_SANITIZER=${{ matrix.sanitizer }}
+      - name: build
+        run: cmake --build build -j 4
+      - name: unit tests
+        run: ctest --test-dir build --output-on-failure
+      - name: quality gate
+        run: ./build/recserve_quality --csv data/quality_fixture.csv --k 10
+      - name: nearline replay is deterministic
+        run: |
+          ./build/recserve_nearline --write-log 20000 --items 4096 --out data/events.bin
+          A=$(./build/recserve_nearline --replay 20000 --publish-ms 1000 --items 4096 --events data/events.bin)
+          B=$(./build/recserve_nearline --replay 20000 --publish-ms 1000 --items 4096 --events data/events.bin)
+          echo "$A"
+          test "$A" = "$B" || { echo "replay is not deterministic"; exit 1; }
+      - name: soak
+        run: ./build/recserve_soak --seconds 2 --items 512 --dim 16
+      - name: diagnose
+        run: ./build/recserve_diagnose --p99 1000 --queue-p99 800 --score-p99 100
+
+  # The index must track the reference implementation, not just "return
+  # something". Without this the recall numbers are unfalsifiable.
+  index-correctness:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=Debug -DRECSERVE_SANITIZER=thread
-          cmake --build build-tsan -j 4
-          ./build-tsan/recserve_tests
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install hnswlib numpy
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
+      - name: recserve vs hnswlib on identical data
+        run: python scripts/validate_hnsw.py --items 32768 --dim 64 --clusters 512 --queries 128
+
+  # Agentic change validation: the same machinery the tuner uses, run as a gate.
+  # Measures, compares against a stored baseline, and emits a verdict.
+  perf-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pydantic
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
+      - name: p99 regression gate
+        run: python scripts/perf_ci.py --bench ./build/recserve_bench --baseline /tmp/perf_baseline.json --write-baseline --items 512 --n 150
+      - name: agent validate-pr verdict
+        run: |
+          python scripts/agent.py --validate-pr --items 16384 --dim 64 --clusters 256 \
+            --n 400 --trials 3 --recall-probe 32 --baseline /tmp/agent_baseline.json
+      - name: agent loop runs end to end without an API key
+        # The heuristic, random and grid planners must work with no credentials;
+        # the LLM planner falls back to heuristic rather than failing the run.
+        run: |
+          python scripts/agent.py --planner heuristic --iterations 3 --items 16384 \
+            --dim 64 --clusters 256 --n 400 --trials 3 --recall-probe 32 \
+            --calibrate-repeats 3 --confirm-repeats 0
+
+  # The Flink job is the offline half of a feature the online path computes
+  # incrementally. This asserts the plain-Python reference agrees with the C++
+  # online aggregate on the same records, which is what makes the skew number
+  # trustworthy on hosts where apache-flink will not install.
+  offline-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
+      - name: online vs offline aggregation agree when fully published
+        run: |
+          ./build/recserve_nearline --write-log 50000 --items 4096 --out data/events.bin
+          # publish-ms 1 flushes essentially everything, so the two sides must
+          # agree to the last event; any disagreement here is a real bug, not skew.
+          ./build/recserve_nearline --replay 50000 --publish-ms 1 --items 4096 \
+            --events data/events.bin --dump-features data/offline/online.csv
+          python scripts/offline_ctr.py --events data/events.bin --limit 50000 \
+            --out data/offline/offline.csv
+          python - <<'PY'
+          import csv, sys
+          def load(p):
+              with open(p) as f:
+                  return {int(r["item"]): (int(r["views"]), int(r["likes"])) for r in csv.DictReader(f)}
+          on, off = load("data/offline/online.csv"), load("data/offline/offline.csv")
+          bad = [i for i in off if on.get(i) != off[i]]
+          missing = sum(off[i][0] - on.get(i, (0, 0))[0] for i in bad)
+          print(f"items={len(off)} disagreeing={len(bad)} views_missing={missing}")
+          # One publish boundary of slack: the replay never flushes the tail.
+          if missing > 64:
+              sys.exit(f"online/offline aggregation diverged by {missing} views")
+          PY
+      - name: skew curve
+        run: python scripts/skew.py --n 50000 --items 4096 --publish-ms 100 5000
+
+  # End-to-end Kafka: a real broker, a real librdkafka consumer, real offsets.
+  # Everything else in this repo runs the nearline path from a file, so without
+  # this job the Kafka claim would be untested.
+  kafka-integration:
+    runs-on: ubuntu-latest
+    services:
+      redpanda:
+        image: docker.redpanda.com/redpandadata/redpanda:v24.2.11
+        ports: ["9092:9092"]
+        options: >-
+          --health-cmd "rpk cluster health | grep -q 'Healthy:.*true'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: install librdkafka
+        run: sudo apt-get update && sudo apt-get install -y librdkafka-dev
+      - run: pip install kafka-python
+      - name: build with the kafka source
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_RDKAFKA=ON
+          cmake --build build -j 4
+      - name: produce
+        run: python scripts/kafka_produce.py --broker 127.0.0.1:9092 --n 50000 --rate 25000 --items 4096
+      - name: consume into the feature snapshot
+        run: |
+          ./build/recserve_nearline --source kafka --brokers 127.0.0.1:9092 \
+            --topic interactions --items 4096 --serve-threads 2 --seconds 10 \
+            --publish-ms 100 --json | tee /tmp/kafka.json
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("/tmp/kafka.json"))
+          print(json.dumps(d, indent=2))
+          if d["source"] != "kafka":
+              sys.exit("fell back off the kafka source")
+          if d["ingested"] < 1000:
+              sys.exit(f"consumed only {d['ingested']} records")
+          if d["source_errors"]:
+              sys.exit(f"{d['source_errors']} decode errors on the topic")
+          PY

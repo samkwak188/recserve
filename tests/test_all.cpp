@@ -187,6 +187,34 @@ static void test_nsw_recall() {
   CHECK(e.index.avg_degree() > 2.0);
 }
 
+// A single-threaded build must be byte-identical run to run. The parallel build
+// deliberately is not (insert order changes which reverse links survive
+// pruning); this pins the property that reproducibility is available on demand.
+static void test_single_threaded_build_is_deterministic() {
+  auto fingerprint = [](int threads) {
+    Engine e;
+    e.cfg.use_hnsw = true;
+    e.cfg.hnsw_m = 8;
+    e.cfg.ef_construction = 32;
+    e.cfg.ef_search = 32;
+    e.cfg.build_threads = threads;
+    e.init_random(3000, 128, 16, 77, 64);
+    double acc = 0;
+    for (int u = 0; u < 32; ++u) {
+      const float* q = e.user_query(static_cast<UserId>(u));
+      auto got = e.index.retrieve(e.cat, q, nullptr, 10, 32, Kernel::Simd);
+      for (std::size_t i = 0; i < got.size(); ++i) {
+        acc += static_cast<double>(got[i].id) * static_cast<double>(i + 1);
+      }
+    }
+    return acc;
+  };
+  const double a = fingerprint(1);
+  const double b = fingerprint(1);
+  CHECK(a == b);
+  CHECK(a != 0.0);
+}
+
 static void test_index_and_catalog_roundtrip() {
   Engine e;
   e.cfg.use_hnsw = true;
@@ -429,6 +457,7 @@ int main() {
     test_soa_strided_matches_simd();
     test_visited_set_epochs();
     test_nsw_recall();
+    test_single_threaded_build_is_deterministic();
     test_index_and_catalog_roundtrip();
     test_all_kernels_end_to_end();
     test_nearline_freshness_and_fault();

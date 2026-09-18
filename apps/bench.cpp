@@ -72,6 +72,7 @@ static void usage() {
 int main(int argc, char** argv) {
   int items = 4096, dim = 64, nreq = 400, k = 10, retrieve_k = 64, trials = 3, warmup = 64;
   int ef = 64, ef_construction = 64, m = 16, recall_probe = 64, workers = 0, clusters = 0;
+  int build_threads = 0;
   bool json = false, brute = false, pin = false, arena = true;
   std::string mode = "baseline", kernel_arg, load_catalog, load_index;
 
@@ -87,6 +88,7 @@ int main(int argc, char** argv) {
     else if (a == "--ef" && i + 1 < argc) ef = std::atoi(argv[++i]);
     else if (a == "--ef-construction" && i + 1 < argc) ef_construction = std::atoi(argv[++i]);
     else if (a == "--m" && i + 1 < argc) m = std::atoi(argv[++i]);
+    else if (a == "--build-threads" && i + 1 < argc) build_threads = std::atoi(argv[++i]);
     else if (a == "--workers" && i + 1 < argc) workers = std::atoi(argv[++i]);
     else if (a == "--trials" && i + 1 < argc) trials = std::atoi(argv[++i]);
     else if (a == "--warmup" && i + 1 < argc) warmup = std::atoi(argv[++i]);
@@ -99,6 +101,7 @@ int main(int argc, char** argv) {
     else if (a == "--no-arena") arena = false;
     else if (a == "--json") json = true;
     else if (a == "--help") { usage(); return 0; }
+    else { std::cerr << "unknown flag: " << a << "\n"; usage(); return 2; }
   }
 
   // Mode presets keep the published board comparable across runs; explicit
@@ -121,6 +124,7 @@ int main(int argc, char** argv) {
   e.cfg.ef_search = ef;
   e.cfg.ef_construction = ef_construction;
   e.cfg.workers = workers;
+  e.cfg.build_threads = build_threads;
 
   const auto t_load0 = now_us();
   if (!load_catalog.empty()) {

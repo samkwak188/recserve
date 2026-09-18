@@ -1,0 +1,32 @@
+{
+  "_comment": "Reference instance prices for scripts/cost_model.py. These go stale. Update as_of and the rates rather than letting the script quote a number nobody checked. Linux on-demand, us-east-1, no commitments; real fleets run reserved or spot and pay materially less, so treat every dollar figure here as a ceiling and a relative comparison, not a quote.",
+  "source": "https://aws.amazon.com/ec2/pricing/on-demand/",
+  "region": "us-east-1",
+  "as_of": "2026-09-17",
+  "pricing_model": "linux on-demand, no reserved or spot discount",
+  "usable_memory_frac": 0.75,
+  "_usable_memory_note": "Fraction of host RAM available to the index after the OS, the allocator, per-request working set and headroom for a rebuild running beside the live index.",
+  "instances": {
+    "c7g.4xlarge": {
+      "vcpu": 16,
+      "mem_gib": 32,
+      "usd_per_hour": 0.58,
+      "arch": "arm64 graviton3",
+      "note": "closest to the measurement host (aarch64 with NEON+SDOT)"
+    },
+    "c6i.4xlarge": {
+      "vcpu": 16,
+      "mem_gib": 32,
+      "usd_per_hour": 0.68,
+      "arch": "x86_64 ice lake",
+      "note": "AVX2 path; the int8 kernel uses PMADDWD here, not SDOT"
+    },
+    "r7g.4xlarge": {
+      "vcpu": 16,
+      "mem_gib": 128,
+      "usd_per_hour": 0.8568,
+      "arch": "arm64 graviton3",
+      "note": "memory-optimised; 4x the RAM per core for catalogs that do not fit"
+    }
+  }
+}

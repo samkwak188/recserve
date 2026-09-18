@@ -314,8 +314,21 @@ class Index {
     return idx < v.size() ? v[idx] : 0u;
   }
 
-  // Section 4.1: l = floor(-ln(U(0,1)) * mL). Seeded from the node id so the
-  // graph is identical whatever order the build threads happen to run in.
+  // Section 4.1: l = floor(-ln(U(0,1)) * mL). Seeded from the node id so a
+  // node's LEVEL does not depend on thread scheduling.
+  //
+  // The graph as a whole is still order-dependent: with several threads
+  // inserting at once, the order in which reverse links arrive changes which
+  // ones the pruning heuristic keeps, so two builds of the same catalog with
+  // the same parameters produce different -- equally valid -- graphs. Measured
+  // on 16,384 items: recall@10 spread of 0.0172 across five 12-thread builds,
+  // and exactly 0.0000 across five single-threaded builds. hnswlib behaves the
+  // same way for the same reason.
+  //
+  // This is why every published measurement loads an index snapshot from disk
+  // instead of rebuilding: otherwise the build noise would sit underneath every
+  // recall comparison. Use --build-threads 1 when reproducibility matters more
+  // than build time.
   int assign_level(int i) const {
     std::mt19937 rng(seed_ * 2654435761u + static_cast<unsigned>(i));
     double u = (static_cast<double>(rng()) + 1.0) / (static_cast<double>(std::mt19937::max()) + 2.0);
