@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <random>
 #include <cstdio>
+#include <thread>
 
 #define CHECK(cond)                                                                 \
   do {                                                                              \
@@ -319,14 +320,20 @@ static void test_snapshot_rcu_concurrency() {
   FeatureSnapshotStore store;
   const int n_items = 512;
   store.init(n_items, 64);
+  const int n_readers = 4;
   std::atomic<bool> stop{false};
   std::atomic<std::uint64_t> reads{0};
   std::atomic<std::uint64_t> torn{0};
+  std::atomic<int> ready{0};
 
   std::vector<std::thread> readers;
-  for (int t = 0; t < 4; ++t) {
+  for (int t = 0; t < n_readers; ++t) {
     readers.emplace_back([&]() {
-      while (!stop.load(std::memory_order_relaxed)) {
+      ready.fetch_add(1, std::memory_order_release);
+      // do-while, not while: the writer's 200 rounds take microseconds and can
+      // finish before a reader is ever scheduled, which made this test pass or
+      // fail on thread-start latency rather than on anything about the snapshot.
+      do {
         const auto g = store.read();
         // Invariant that must hold in every published generation: likes never
         // exceed views. A half-applied delta would break it.
@@ -337,8 +344,14 @@ static void test_snapshot_rcu_concurrency() {
           }
         }
         reads.fetch_add(1, std::memory_order_relaxed);
-      }
+      } while (!stop.load(std::memory_order_relaxed));
     });
+  }
+
+  // Publishes must actually overlap live readers, or the grace period is never
+  // exercised and the test proves nothing.
+  while (ready.load(std::memory_order_acquire) < n_readers) {
+    std::this_thread::yield();
   }
 
   for (int round = 0; round < 200; ++round) {
@@ -354,7 +367,7 @@ static void test_snapshot_rcu_concurrency() {
   for (auto& t : readers) t.join();
 
   CHECK(torn.load() == 0);
-  CHECK(reads.load() > 0);
+  CHECK(reads.load() >= static_cast<std::uint64_t>(n_readers));
   CHECK(store.publishes() == 200);
   // Both buffers must agree once the writer has quiesced.
   const auto g = store.read();
