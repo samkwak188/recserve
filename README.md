@@ -405,6 +405,29 @@ Seven jobs, all green:
 | `flink-job` | the Flink job runs and its output equals the reference exactly |
 | `quality-real-data` | ALS on MovieLens; C++ reproduces numpy; HNSW recall > 0.95 |
 
+## What this does not do
+
+Stated plainly, because the gap between "written" and "verified" is where
+projects like this usually mislead.
+
+- **No GPU scoring.** The JD-shaped version of this project would measure the
+  batch size at which GPU ranking overtakes CPU. The development host has a
+  Qualcomm Adreno integrated GPU and no CUDA toolkit, and GitHub's hosted
+  runners have no GPU, so there is nowhere to run it. Unrunnable CUDA in the
+  tree would be worth less than this paragraph.
+- **Shards are threads, not hosts.** No network, no separate failure domain, no
+  cross-host variance. The tail amplification numbers are a lower bound.
+- **No cross-region replication.** One process, one machine.
+- **The ranker is four hand-set weights.** Item embeddings are trained (ALS);
+  the ranking model on top of them is not. This serves a model, it does not
+  learn one.
+- **Prices are on-demand list.** Real fleets run reserved or spot and pay
+  materially less, so every dollar figure is a ceiling and a relative
+  comparison, not a quote.
+
+Everything else in this README is produced by `python scripts/measure.py` on the
+host named at the top, or by a CI job you can open and read.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
