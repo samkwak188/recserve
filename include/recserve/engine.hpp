@@ -17,8 +17,8 @@
 
 namespace recserve {
 
-// Per-thread scratch reused across requests. This is what "arena mode" buys:
-// no malloc/free on the request path once the buffers reach steady-state size.
+// Per-thread ranking scratch reused across requests. Retrieval/result vectors
+// can still allocate; this option is not a zero-allocation request-path guarantee.
 struct Scratch {
   std::vector<Neighbor> cand;
   std::vector<ScoredItem> scored;

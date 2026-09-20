@@ -93,7 +93,8 @@ bool net_ready(socket_t s, bool write, int timeout_ms) {
 #endif
 }
 
-bool transfer_until(socket_t s, std::uint8_t* data, std::size_t n, bool write, std::uint64_t deadline_us) {
+bool transfer_until(socket_t s, std::uint8_t* data, std::size_t n, bool write, std::uint64_t deadline_us, bool* clean_eof) {
+  if (clean_eof) *clean_eof = false;
   std::size_t offset = 0;
   while (offset < n) {
     const auto now = now_us();
@@ -106,7 +107,10 @@ bool transfer_until(socket_t s, std::uint8_t* data, std::size_t n, bool write, s
     const auto got = write ? send(s, data + offset, n-offset, MSG_NOSIGNAL) : recv(s, data + offset, n-offset, 0);
     if (got < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
 #endif
-    if (got <= 0) return false;
+    if (got <= 0) {
+      if (clean_eof) *clean_eof = got == 0 && offset == 0;
+      return false;
+    }
     offset += static_cast<std::size_t>(got);
   }
   return true;

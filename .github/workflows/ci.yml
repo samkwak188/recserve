@@ -3,6 +3,9 @@ on:
   push:
   pull_request:
 
+env:
+  IMPLICIT_DISABLE_CUDA: "1"
+
 jobs:
   # Sanitizers first: a data race in the RCU snapshot or the parallel HNSW build
   # is the kind of bug that passes every functional test and then corrupts a
@@ -48,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install hnswlib numpy
+      - run: pip install -c requirements.txt hnswlib numpy
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
       - name: recserve vs hnswlib on identical data
         run: python scripts/validate_hnsw.py --items 32768 --dim 64 --clusters 512 --queries 128
@@ -67,7 +70,7 @@ jobs:
           path: base
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install pydantic
+      - run: pip install -c candidate/requirements.txt pydantic
       - run: cmake -S candidate -B candidate/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-mavx2 -mfma" && cmake --build candidate/build -j 4
       - run: cmake -S base -B base/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-mavx2 -mfma" && cmake --build base/build -j 4
       - name: negative gate tests
@@ -173,7 +176,7 @@ jobs:
         with: { python-version: "3.12" }
       - name: install librdkafka
         run: sudo apt-get update && sudo apt-get install -y librdkafka-dev
-      - run: pip install kafka-python
+      - run: pip install -c requirements.txt kafka-python
       - name: build with the kafka source
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_RDKAFKA=ON
@@ -232,7 +235,7 @@ jobs:
         with: { python-version: "3.10" }
       - name: install pyflink and the kafka connector
         run: |
-          pip install "apache-flink==1.20.0" kafka-python
+          pip install "apache-flink==1.20.0" "kafka-python==2.2.15"
           curl -fsSLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.3.0-1.20/flink-sql-connector-kafka-3.3.0-1.20.jar
           ls -l flink-sql-connector-kafka-3.3.0-1.20.jar
       - name: produce the same records to kafka and to a file
@@ -260,7 +263,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install numpy scipy implicit pandas certifi
+      - run: pip install -c requirements.txt numpy scipy implicit pandas certifi
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
       - name: train ALS on movielens
         run: python scripts/prep_movielens.py --dataset small --factors 32 --iterations 15

@@ -26,6 +26,8 @@ def main():
     log = directory / (args.name + '.log')
     started = time.monotonic()
     receipt = dict(command=command, started_utc=datetime.datetime.now(datetime.timezone.utc).isoformat())
+    receipt.update(status='running', log=str(log))
+    log.with_suffix('.json').write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
     with log.open('w', encoding='utf-8') as output:
         try:
             process = subprocess.Popen(command, cwd=root, stdout=output, stderr=subprocess.STDOUT,
@@ -42,7 +44,7 @@ def main():
         except OSError as exc:
             code = 127
             output.write(str(exc) + '\n')
-    receipt.update(exit_code=code, elapsed_s=round(time.monotonic()-started, 2), log=str(log))
+    receipt.update(status='completed', exit_code=code, elapsed_s=round(time.monotonic()-started, 2), log=str(log))
     log.with_suffix('.json').write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
     print(json.dumps(receipt))
     if code:

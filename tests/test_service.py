@@ -104,6 +104,7 @@ def main():
             code, raw = http(admin, '/metrics')
             metrics = {k: int(v) for k, v in (line.split() for line in raw.splitlines())}
             assert code == 200 and metrics['recserve_connections_rejected_total'] > 0
+            assert metrics['recserve_clean_disconnects_total'] >= 3
             assert metrics['recserve_connections_active'] <= 2 and metrics['recserve_connections_queued'] <= 2
             if args.backend == 'cuda':
                 assert metrics['recserve_gpu_batch_max'] >= 2 and metrics['recserve_gpu_fallback_total'] == 0

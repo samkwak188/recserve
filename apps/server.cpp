@@ -12,7 +12,7 @@ volatile std::sig_atomic_t interrupted = 0;
 void stop_signal(int) { interrupted = 1; }
 struct Counters {
   std::atomic<std::uint64_t> accepted{0}, rejected{0}, active{0}, queued{0}, requests{0}, ok{0},
-      timeout{0}, bad{0}, unavailable{0}, io_failure{0}, duration_us{0};
+      timeout{0}, bad{0}, unavailable{0}, io_failure{0}, clean_disconnect{0}, duration_us{0};
 };
 struct Connection { socket_t socket; std::uint64_t accepted_us; };
 }
@@ -96,7 +96,12 @@ int run(int argc, char** argv) {
       auto frame_deadline = connection.accepted_us + static_cast<std::uint64_t>(io_ms) * 1000;
       while (!stopping) {
         std::uint8_t frame[8 + kReqBytes];
-        if (!transfer_until(socket, frame, 8, false, frame_deadline)) { ++counters.io_failure; break; }
+        bool clean_eof = false;
+        if (!transfer_until(socket, frame, 8, false, frame_deadline, &clean_eof)) {
+          if (clean_eof) ++counters.clean_disconnect;
+          else ++counters.io_failure;
+          break;
+        }
         if (!valid_frame_header(frame)) { ++counters.bad; break; }
         if (!transfer_until(socket, frame + 8, kReqBytes, false, frame_deadline)) { ++counters.io_failure; break; }
         Request request;
@@ -154,6 +159,7 @@ int run(int argc, char** argv) {
              << "recserve_bad_requests_total " << counters.bad << '\n'
              << "recserve_unavailable_total " << counters.unavailable << '\n'
              << "recserve_io_failures_total " << counters.io_failure << '\n'
+             << "recserve_clean_disconnects_total " << counters.clean_disconnect << '\n'
              << "recserve_compute_duration_microseconds_sum " << counters.duration_us << '\n'
              << "recserve_rss_bytes " << process_rss_bytes() << '\n';
         if (batcher) body << "recserve_gpu_batches_total " << batcher->batches << '\n'
