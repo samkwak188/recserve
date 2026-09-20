@@ -627,11 +627,10 @@ def validate_pr(w: Workload, max_ratio: float, baseline_path: Path) -> int:
         "rss_mib": snap["rss_mib"],
     }
     if not baseline_path.exists():
-        baseline_path.parent.mkdir(parents=True, exist_ok=True)
-        baseline_path.write_text(json.dumps(snap, indent=2) + "\n")
-        verdict["status"] = "baseline_written"
+        verdict["status"] = "fail"
+        verdict["reasons"] = ["baseline missing; a comparison requires an independently measured baseline"]
         print(json.dumps(verdict, indent=2))
-        return 0
+        return 2
 
     base = json.loads(baseline_path.read_text())
     ratio = snap["p99_mean_us"] / base["p99_mean_us"]

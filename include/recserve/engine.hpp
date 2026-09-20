@@ -8,6 +8,7 @@
 #include "metrics.hpp"
 #include "quality.hpp"
 #include "feature_snapshot.hpp"
+#include "gpu.hpp"
 #include <future>
 #include <random>
 #include <cstring>
@@ -45,6 +46,7 @@ class Engine {
   float rank_w[4] = {1.f, 0.15f, 0.10f, 0.05f};
   std::atomic<bool> running{false};
   std::uint32_t max_queue = 128;
+  std::unique_ptr<GpuScorer> gpu;
 
   // Build every layout the configured kernel needs, and nothing else. Building
   // all four on a 1M catalog costs ~500 MiB of RSS for layouts that go unread.
@@ -52,6 +54,12 @@ class Engine {
     if (cfg.kernel == Kernel::SoaStrided) cat.rebuild_soa();
     if (cfg.kernel == Kernel::Blocked) cat.rebuild_blocked();
     if (cfg.kernel == Kernel::Int8) cat.quantize_i8();
+    if (cfg.kernel == Kernel::Cuda) {
+      if (cfg.use_hnsw) throw std::invalid_argument("CUDA requires exact retrieval (--brute)");
+      std::string error;
+      gpu = make_gpu_scorer(cat.aos.data(), cat.n, cat.dim, 1, &error);
+      if (!gpu) throw std::runtime_error(error);
+    }
   }
 
   void build_index() {
@@ -108,7 +116,8 @@ class Engine {
     cfg.n_users = n_users;
     prepare_layouts();
     if (cfg.use_hnsw) {
-      if (!index_path.empty() && index.load(index_path)) {
+      if (!index_path.empty()) {
+        if (!index.load(index_path) || index.n() != cat.n || index.dim() != cat.dim) return false;
         build_stats = BuildStats{};
       } else {
         build_index();
@@ -128,11 +137,14 @@ class Engine {
     in.read(reinterpret_cast<char*>(&magic), 4);
     in.read(reinterpret_cast<char*>(&nq), 4);
     in.read(reinterpret_cast<char*>(&d), 4);
-    if (!in || magic != 0x51525931u || nq <= 0 || d != cfg.dim) return false;
+    if (!in || magic != 0x51525931u || nq <= 0 || nq > 100000000 || d != cfg.dim) return false;
+    in.seekg(0, std::ios::end);
+    if (in.tellg() != static_cast<std::streamoff>(12ull + 4ull * nq * d)) return false;
+    in.seekg(12);
     user_queries_.assign(static_cast<std::size_t>(nq) * d, 0.f);
     in.read(reinterpret_cast<char*>(user_queries_.data()),
             static_cast<std::streamsize>(user_queries_.size() * sizeof(float)));
-    if (!in) return false;
+    if (!in || !std::all_of(user_queries_.begin(), user_queries_.end(), [](float v) { return std::isfinite(v); })) return false;
     n_user_queries_ = nq;
     cfg.n_users = nq;
     // The feature store was sized for whatever n_users the fixture was loaded
@@ -159,10 +171,11 @@ class Engine {
     pool.stop();
   }
 
-  Response recommend_sync(const Request& req) {
+  Response recommend_sync(const Request& req, const std::vector<Neighbor>* candidates = nullptr) {
     Response r;
     r.id = req.id;
-    if (req.k == 0 || req.k > kMaxK) {
+    if (req.k == 0 || req.k > kMaxK || req.retrieve_k > 65536 || req.timeout_us == 0 ||
+        (cfg.kernel == Kernel::Cuda && req.retrieve_k > kMaxK)) {
       r.status = Status::BadRequest;
       return r;
     }
@@ -185,12 +198,12 @@ class Engine {
       const UserFeatures& uf =
           g->users[static_cast<std::size_t>(req.user_id) % g->users.size()];
       r.feature_us = static_cast<std::uint32_t>(now_us() - tf0);
-      rank_into(r, req, q, uf, g->items.data(), g->items.size());
+      rank_into(r, req, q, uf, g->items.data(), g->items.size(), candidates);
       r.feature_generation = static_cast<std::uint32_t>(g->generation);
     } else {
       const UserFeatures uf = features.user(req.user_id);
       r.feature_us = static_cast<std::uint32_t>(now_us() - tf0);
-      rank_into(r, req, q, uf, nullptr, 0);
+      rank_into(r, req, q, uf, nullptr, 0, candidates);
     }
     r.hops = static_cast<std::uint32_t>(Index::last_hops());
     r.status = Status::Ok;
@@ -200,8 +213,9 @@ class Engine {
   // Retrieve then rank. `items` is the snapshot's item table when one is in
   // use; nullptr falls back to the mutex-guarded store.
   void rank_into(Response& r, const Request& req, const float* q, const UserFeatures& uf,
-                 const ItemFeatures* items, std::size_t n_items) {
-    Scratch& sc = thread_scratch();
+                 const ItemFeatures* items, std::size_t n_items, const std::vector<Neighbor>* candidates = nullptr) {
+    Scratch local;
+    Scratch& sc = cfg.use_arena ? thread_scratch() : local;
     const QuantizedQuery* qq = nullptr;
     if (cfg.kernel == Kernel::Int8) {
       sc.qq.set(q, cfg.dim);  // one quantization per request, not per item
@@ -210,7 +224,16 @@ class Engine {
 
     const int rk = static_cast<int>(std::max(req.k, req.retrieve_k));
     const auto tr0 = now_us();
-    if (cfg.use_hnsw && index.n() > 0) {
+    if (candidates) {
+      sc.cand = *candidates;
+    } else if (cfg.kernel == Kernel::Cuda) {
+      const int count = std::min(rk, cat.n);
+      if (count > static_cast<int>(kMaxK)) throw std::invalid_argument("CUDA retrieve_k exceeds 512");
+      sc.scored.resize(static_cast<std::size_t>(count));
+      gpu->topk(q, 1, count, sc.scored.data());
+      sc.cand.clear();
+      for (const auto& item : sc.scored) sc.cand.push_back({item.id, item.score});
+    } else if (cfg.use_hnsw && index.n() > 0) {
       sc.cand = index.retrieve(cat, q, qq, rk, cfg.ef_search, cfg.kernel);
     } else {
       sc.cand = index.brute(cat, q, qq, rk, cfg.kernel);
@@ -275,7 +298,12 @@ class Engine {
             promise->set_value(std::move(r));
             return;
           }
-          r = recommend_sync(req);
+          try { r = recommend_sync(req); }
+          catch (const std::exception&) { r.id = req.id; r.status = Status::Unavailable; }
+          if (r.status == Status::Ok && now_us() - t_submit > req.timeout_us) {
+            r.status = Status::Timeout;
+            r.items.clear();
+          }
           r.queue_wait_us = static_cast<std::uint32_t>(waited);
           promise->set_value(std::move(r));
         },
@@ -377,14 +405,14 @@ class Engine {
 
   // Retrieve-recall against the exact float32 top-k, over `n_probe` random
   // queries. This is the number that says what a latency win actually cost.
-  double measure_retrieve_recall(int k, int n_probe, unsigned seed = 7) {
+  double measure_retrieve_recall(int k, int n_probe, unsigned seed = 7, bool sequential = false) {
     if (cat.n == 0) return 0;
     std::mt19937 rng(seed);
     double acc = 0;
     int n = 0;
     QuantizedQuery qq;
     for (int t = 0; t < n_probe; ++t) {
-      const float* q = user_query(static_cast<UserId>(rng() % std::max(1, cfg.n_users)));
+      const float* q = user_query(static_cast<UserId>(sequential ? static_cast<unsigned>(t) : rng() % std::max(1, cfg.n_users)));
       if (!q) break;
       const QuantizedQuery* qp = nullptr;
       if (cfg.kernel == Kernel::Int8) {
@@ -394,9 +422,16 @@ class Engine {
       auto exact = index.brute(cat, q, nullptr, k, Kernel::Simd);
       std::unordered_set<ItemId> gold;
       for (auto& e : exact) gold.insert(e.id);
-      auto got = cfg.use_hnsw && index.n() > 0
-                     ? index.retrieve(cat, q, qp, k, cfg.ef_search, cfg.kernel)
-                     : index.brute(cat, q, qp, k, cfg.kernel);
+      std::vector<Neighbor> got;
+      if (cfg.kernel == Kernel::Cuda) {
+        std::vector<ScoredItem> result(static_cast<std::size_t>(k));
+        gpu->topk(q, 1, k, result.data());
+        for (const auto& item : result) got.push_back({item.id, item.score});
+      } else {
+        got = cfg.use_hnsw && index.n() > 0
+                  ? index.retrieve(cat, q, qp, k, cfg.ef_search, cfg.kernel)
+                  : index.brute(cat, q, qp, k, cfg.kernel);
+      }
       std::vector<ItemId> ap;
       for (auto& a : got) ap.push_back(a.id);
       acc += recall_at_k(ap, gold, k);

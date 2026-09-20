@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <stdexcept>
 
 namespace recserve {
 
@@ -32,7 +33,7 @@ enum class DType { Float32, Int8 };
 // Which scoring kernel the engine uses. SoaStrided is deliberately kept: it is
 // the layout that loses, and the board reports it next to Blocked so the
 // difference between "SoA" and "SoA that matches the access pattern" is visible.
-enum class Kernel : std::uint8_t { Scalar, Simd, SoaStrided, Blocked, Int8 };
+enum class Kernel : std::uint8_t { Scalar, Simd, SoaStrided, Blocked, Int8, Cuda };
 
 inline const char* kernel_name(Kernel k) {
   switch (k) {
@@ -41,6 +42,7 @@ inline const char* kernel_name(Kernel k) {
     case Kernel::SoaStrided: return "soa_strided";
     case Kernel::Blocked: return "blocked";
     case Kernel::Int8: return "int8";
+    case Kernel::Cuda: return "cuda";
   }
   return "scalar";
 }
@@ -50,7 +52,9 @@ inline Kernel kernel_from_string(const std::string& s) {
   if (s == "soa_strided" || s == "soa") return Kernel::SoaStrided;
   if (s == "blocked") return Kernel::Blocked;
   if (s == "int8") return Kernel::Int8;
-  return Kernel::Scalar;
+  if (s == "cuda") return Kernel::Cuda;
+  if (s == "scalar") return Kernel::Scalar;
+  throw std::invalid_argument("unknown kernel: " + s);
 }
 
 

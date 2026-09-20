@@ -8,6 +8,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import math
 
 
 def parse_p99(text: str) -> float:
@@ -30,12 +31,16 @@ def main() -> int:
     cmd = [args.bench, "--items", str(args.items), "--n", str(args.n), "--mode", "simd", "--trials", "3"]
     out = subprocess.check_output(cmd, text=True)
     p99 = parse_p99(out)
+    if not math.isfinite(p99) or p99 <= 0:
+        raise SystemExit("invalid p99 measurement")
     path = pathlib.Path(args.baseline)
-    if args.write_baseline or not path.exists():
+    if args.write_baseline:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"p99_mean_us": p99, "items": args.items, "n": args.n}, indent=2) + "\n")
         print(f"wrote baseline {p99:.3f} us -> {path}")
         return 0
+    if not path.exists():
+        raise SystemExit("baseline missing; create explicitly with --write-baseline")
     base = json.loads(path.read_text())["p99_mean_us"]
     print(f"baseline_us={base:.3f} current_us={p99:.3f} ratio={p99 / base:.3f}")
     if p99 > base * args.max_ratio:

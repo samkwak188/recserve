@@ -72,6 +72,58 @@ static void test_protocol() {
   CHECK(r2.items.size() == 1 && r2.items[0].id == 3);
 }
 
+static void test_malformed_protocol() {
+  Response r;
+  r.items.push_back({3, .5f});
+  auto good = encode_response(r);
+  for (std::size_t n = 0; n < good.size(); ++n) {
+    Response decoded;
+    CHECK(!decode_response(good.data(), n, decoded));
+  }
+  // A claimed item in a header-only payload formerly read past the input.
+  auto bad = good;
+  std::uint32_t short_payload = 16;
+  std::memcpy(bad.data() + 4, &short_payload, 4);
+  bad.resize(24);
+  CHECK(!decode_response(bad.data(), bad.size(), r));
+  auto req = encode_request(Request{});
+  std::uint32_t huge = 0xfffffffcu;
+  std::memcpy(req.data() + 4, &huge, 4);
+  CHECK(!valid_frame_header(req.data()));
+  Request q;
+  CHECK(!decode_request(req.data(), req.size(), q));
+  FeatureStore features;
+  features.init(2, 4, true);
+  features.apply_event(1, 0, 0xffffffffu, 1);
+  CHECK(features.item(0xffffffffu).views == 0);
+}
+
+static void test_snapshot_guard_ownership() {
+  FeatureSnapshotStore first, second;
+  first.init(4, 4);
+  second.init(4, 4);
+  // Nested guards and multiple stores on the same thread have distinct slots.
+  {
+    auto a = first.read();
+    auto b = first.read();
+    auto c = second.read();
+    CHECK(a->generation == b->generation && c->generation == 1);
+  }
+  for (int i = 0; i < 2 * kMaxReaders; ++i) {
+    std::thread t([&] { auto g = first.read(); CHECK(g->generation == 1); });
+    t.join();
+  }
+  std::vector<std::unique_ptr<FeatureSnapshotStore::Guard>> guards;
+  ReaderRegistry registry;
+  std::vector<int> slots;
+  for (int i = 0; i < kMaxReaders; ++i) slots.push_back(registry.acquire_slot());
+  bool rejected = false;
+  try { (void)registry.acquire_slot(); } catch (const std::runtime_error&) { rejected = true; }
+  CHECK(rejected);
+  for (int slot : slots) registry.leave(slot);
+  CHECK(registry.acquire_slot() == 0);
+}
+
 static void test_topk_and_timeout() {
   Engine e;
   e.cfg.use_hnsw = false;
@@ -488,6 +540,8 @@ int main() {
     test_dot_and_normalize();
     test_arena();
     test_protocol();
+    test_malformed_protocol();
+    test_snapshot_guard_ownership();
     test_topk_and_timeout();
     test_brute_vs_self();
     test_quality_gate();

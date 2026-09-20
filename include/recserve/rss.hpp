@@ -12,6 +12,7 @@
 #pragma comment(lib, "psapi.lib")
 #else
 #include <fstream>
+#include <unistd.h>
 #endif
 
 namespace recserve {
@@ -24,8 +25,10 @@ inline std::size_t process_rss_bytes() {
   return 0;
 #else
   std::ifstream in("/proc/self/statm");
-  std::size_t pages = 0;
-  if (in >> pages) return pages * 4096ull;
+  std::size_t virtual_pages = 0, resident_pages = 0;
+  const auto page_size = sysconf(_SC_PAGESIZE);
+  if (page_size > 0 && in >> virtual_pages >> resident_pages)
+    return resident_pages * static_cast<std::size_t>(page_size);
   return 0;
 #endif
 }

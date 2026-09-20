@@ -1,0 +1,14 @@
+*
+!CMakeLists.txt
+!include/
+!include/**
+!src/
+!src/**
+!apps/
+!apps/**
+!tests/
+!tests/**
+!scripts/
+!scripts/bundle.py
+!data/
+!data/quality_fixture.csv

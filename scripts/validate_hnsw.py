@@ -92,7 +92,7 @@ def main() -> int:
     build = subprocess.run(
         [str(exe("recserve_fixture")), "--items", str(args.items), "--dim", str(args.dim),
          "--clusters", str(args.clusters), "--m", str(args.m),
-         "--ef-construction", str(args.ef_construction), "--queries", str(args.queries),
+         "--ef-construction", str(args.ef_construction), "--queries", str(args.queries), '--build-threads', '1',
          "--out-catalog", str(cat_p), "--out-index", str(idx_p), "--out-queries", str(qry_p)],
         cwd=ROOT, capture_output=True, text=True,
     )
@@ -110,7 +110,7 @@ def main() -> int:
     # product; hnswlib reports distance = 1 - ip, the ordering is the same.
     hl = hnswlib.Index(space="ip", dim=args.dim)
     hl.init_index(max_elements=len(cat), ef_construction=args.ef_construction, M=args.m)
-    hl.add_items(cat, np.arange(len(cat)))
+    hl.add_items(cat, np.arange(len(cat)), num_threads=1)
 
     rows = []
     for ef in args.ef:
@@ -120,6 +120,7 @@ def main() -> int:
 
         rs = subprocess.run(
             [str(exe("recserve_bench")), "--load-catalog", str(cat_p), "--load-index", str(idx_p),
+             '--load-queries', str(qry_p), '--sequential-recall',
              "--mode", "simd", "--ef", str(ef), "--k", str(args.k), "--retrieve-k", str(args.k),
              "--n", "100", "--trials", "1", "--recall-probe", str(args.queries), "--json"],
             cwd=ROOT, capture_output=True, text=True,

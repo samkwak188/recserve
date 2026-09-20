@@ -90,6 +90,8 @@ struct Catalog {
   // candidate ids are not contiguous and blocking cannot help.
   float dot_item(const float* query, const QuantizedQuery* qq, int item, Kernel k) const {
     switch (k) {
+      case Kernel::Cuda:
+        throw std::invalid_argument("CUDA must use the batched GPU retrieval interface");
       case Kernel::Int8: {
         if (aos_i8.empty() || qq == nullptr) return dot_simd(query, aos_item(item), dim);
         const int acc = dot_i8(qq->q.data(), i8_item(item), dim);
@@ -167,11 +169,14 @@ struct Catalog {
     in.read(reinterpret_cast<char*>(&magic), 4);
     in.read(reinterpret_cast<char*>(&nn), 4);
     in.read(reinterpret_cast<char*>(&dd), 4);
-    if (!in || magic != 0x43415431u || nn <= 0 || dd <= 0) return false;
+    if (!in || magic != 0x43415431u || nn <= 0 || nn > 100000000 || dd <= 0 || dd > 4096) return false;
+    in.seekg(0, std::ios::end);
+    if (in.tellg() != static_cast<std::streamoff>(12ull + 4ull * nn * dd)) return false;
+    in.seekg(12);
     resize(nn, dd);
     in.read(reinterpret_cast<char*>(aos.data()),
             static_cast<std::streamsize>(aos.size() * sizeof(float)));
-    return static_cast<bool>(in);
+    return static_cast<bool>(in) && std::all_of(aos.begin(), aos.end(), [](float v) { return std::isfinite(v); });
   }
 };
 

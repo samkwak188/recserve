@@ -1,4 +1,5 @@
 #include "recserve/engine.hpp"
+#include "recserve/rss.hpp"
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -18,17 +19,7 @@
 using namespace recserve;
 
 static std::size_t rss_bytes() {
-#ifdef _WIN32
-  PROCESS_MEMORY_COUNTERS pmc{};
-  pmc.cb = sizeof(pmc);
-  if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) return pmc.WorkingSetSize;
-  return 0;
-#else
-  std::ifstream in("/proc/self/statm");
-  std::size_t pages = 0;
-  if (in >> pages) return pages * 4096;
-  return 0;
-#endif
+  return process_rss_bytes();
 }
 
 int main(int argc, char** argv) {

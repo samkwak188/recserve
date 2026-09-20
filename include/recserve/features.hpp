@@ -125,7 +125,7 @@ class FeatureStore {
 
   ItemFeatures item(ItemId i) {
     maybe_delay();
-    if (fail_ || static_cast<int>(i) >= n_items_) return {};
+    if (fail_ || static_cast<std::size_t>(i) >= items_.size()) return {};
     std::lock_guard<std::mutex> g(mu_);
     return items_[i];
   }
@@ -140,7 +140,7 @@ class FeatureStore {
       for (int k = 0; k < 7; ++k) uf->last_items[k] = uf->last_items[k + 1];
       uf->last_items[7] = it;
     }
-    if (static_cast<int>(it) < n_items_) {
+    if (static_cast<std::size_t>(it) < items_.size()) {
       auto& f = items_[it];
       f.last_event_ms = event_ms;
       f.views += 1;

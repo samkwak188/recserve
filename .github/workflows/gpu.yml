@@ -1,0 +1,21 @@
+name: CUDA execution
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gpu:
+    # Manually dispatched trusted commits only. Never run untrusted PRs here.
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: nvidia-smi
+      - run: bash scripts/check_gpu.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-validation
+          path: .cache/logs/

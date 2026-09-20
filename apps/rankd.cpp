@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     socket_t c = accept_tcp(srv);
     if (c == net_invalid()) continue;
     std::uint8_t hdr[8];
-    if (!recv_all(c, hdr, 8)) {
+    if (!recv_all(c, hdr, 8) || !valid_frame_header(hdr)) {
       net_close(c);
       continue;
     }
@@ -67,7 +67,10 @@ int main(int argc, char** argv) {
     std::memcpy(&len, hdr + 4, 4);
     std::vector<std::uint8_t> buf(8 + len);
     std::memcpy(buf.data(), hdr, 8);
-    if (len) recv_all(c, buf.data() + 8, len);
+    if (len && !recv_all(c, buf.data() + 8, len)) {
+      net_close(c);
+      continue;
+    }
     Request req;
     if (!decode_request(buf.data(), buf.size(), req)) {
       net_close(c);

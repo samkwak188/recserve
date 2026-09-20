@@ -111,7 +111,8 @@ def main() -> int:
     out = ROOT / "data"
     out.mkdir(parents=True, exist_ok=True)
 
-    raw = load_ratings(fetch(args.dataset, ROOT / args.cache))
+    zpath = fetch(args.dataset, ROOT / args.cache)
+    raw = load_ratings(zpath)
     users_raw = raw[:, 0].astype(np.int64)
     items_raw = raw[:, 1].astype(np.int64)
     ratings = raw[:, 2].astype(np.float32)
@@ -201,6 +202,8 @@ def main() -> int:
             f.write(f"{remap[int(u)]},{int(i)}\n")
 
     meta = {
+        "split_protocol": "per-user temporal holdout; not global time isolation",
+        "seed": args.seed,
         "dataset": args.dataset, "factors": args.factors, "iterations": args.iterations,
         "regularization": args.regularization, "alpha": args.alpha,
         "min_rating": args.min_rating, "test_frac": args.test_frac,
@@ -211,6 +214,17 @@ def main() -> int:
         "catalog": cat_p.name, "queries": qry_p.name, "test": test_p.name,
         "train_csv": seen_p.name,
     }
+    # Keep raw identities: query row and catalog row are implementation details.
+    user_map = out / f"{prefix}_user_ids.csv"
+    item_map = out / f"{prefix}_item_ids.csv"
+    np.savetxt(user_map, np.column_stack((np.arange(len(eval_users)), uniq_u[eval_users])),
+               fmt='%d', delimiter=',', header='query_row,user_id', comments='')
+    np.savetxt(item_map, np.column_stack((np.arange(n_items), uniq_i)), fmt='%d', delimiter=',',
+               header='item_row,item_id', comments='')
+    import hashlib
+    meta['files'] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                     for p in (cat_p, qry_p, test_p, seen_p, user_map, item_map)}
+    meta['dataset_sha256'] = hashlib.sha256(zpath.read_bytes()).hexdigest()
     (out / f"{prefix}_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     print(json.dumps(meta, indent=2))
     return 0

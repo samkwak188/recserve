@@ -23,6 +23,25 @@
 
 namespace recserve {
 
+inline bool pin_current_thread() {
+#ifdef _WIN32
+  DWORD_PTR process_mask = 0, system_mask = 0;
+  if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask) || !process_mask) return false;
+  const auto first = process_mask & (~process_mask + 1);
+  return SetThreadAffinityMask(GetCurrentThread(), first) != 0;
+#else
+  cpu_set_t allowed;
+  if (pthread_getaffinity_np(pthread_self(), sizeof(allowed), &allowed) != 0) return false;
+  for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
+    if (!CPU_ISSET(cpu, &allowed)) continue;
+    cpu_set_t target;
+    CPU_ZERO(&target); CPU_SET(cpu, &target);
+    return pthread_setaffinity_np(pthread_self(), sizeof(target), &target) == 0;
+  }
+  return false;
+#endif
+}
+
 class ThreadPool {
  public:
   using Job = std::function<void()>;

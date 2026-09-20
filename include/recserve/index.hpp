@@ -211,6 +211,7 @@ class Index {
   }
 
   int n() const { return n_; }
+  int dim() const { return dim_; }
   int m() const { return m_; }
   int max_level() const { return max_level_; }
   static std::uint64_t last_hops() { return thread_hops(); }
@@ -263,7 +264,15 @@ class Index {
     auto r32 = [&](int& v) { in.read(reinterpret_cast<char*>(&v), 4); };
     in.read(reinterpret_cast<char*>(&magic), 4);
     r32(n_); r32(dim_); r32(m_); r32(m_max_); r32(m_max0_); r32(max_level_); r32(entry);
-    if (!in || magic != 0x48535732u || n_ <= 0 || m_max0_ <= 0) return false;
+    if (!in || magic != 0x48535732u || n_ <= 0 || n_ > 100000000 || dim_ <= 0 || dim_ > 4096 ||
+        m_ < 2 || m_ > 1024 || m_max_ != m_ || m_max0_ != 2 * m_ ||
+        max_level_ < 0 || max_level_ > 64 || entry < 0 || entry >= n_) return false;
+    const auto body = in.tellg();
+    in.seekg(0, std::ios::end);
+    const auto file_end = in.tellg();
+    const auto base_bytes = static_cast<std::uint64_t>(n_) * (8ull + 4ull * m_max0_);
+    if (file_end < body || static_cast<std::uint64_t>(file_end - body) < base_bytes) return false;
+    in.seekg(body);
     entry_ = static_cast<ItemId>(entry);
     deg0_.assign(static_cast<std::size_t>(n_), 0u);
     links0_.assign(static_cast<std::size_t>(n_) * m_max0_, 0u);
@@ -274,20 +283,35 @@ class Index {
             static_cast<std::streamsize>(links0_.size() * sizeof(ItemId)));
     in.read(reinterpret_cast<char*>(level_.data()),
             static_cast<std::streamsize>(level_.size() * sizeof(int)));
+    if (!in) return false;
     upper_.assign(static_cast<std::size_t>(n_), {});
     updeg_.assign(static_cast<std::size_t>(n_), {});
     for (int i = 0; i < n_; ++i) {
       const int lv = level_[static_cast<std::size_t>(i)];
+      if (lv < 0 || lv > max_level_ || deg0_[static_cast<std::size_t>(i)] > static_cast<unsigned>(m_max0_)) return false;
+      for (std::uint32_t j = 0; j < deg0_[static_cast<std::size_t>(i)]; ++j)
+        if (links0_[static_cast<std::size_t>(i) * m_max0_ + j] >= static_cast<unsigned>(n_)) return false;
       if (lv <= 0) continue;
+      const auto bytes = static_cast<std::uint64_t>(lv) * (4ull + 4ull * m_max_);
+      if (in.tellg() < 0 || static_cast<std::uint64_t>(file_end - in.tellg()) < bytes) return false;
       updeg_[static_cast<std::size_t>(i)].assign(static_cast<std::size_t>(lv), 0u);
       upper_[static_cast<std::size_t>(i)].assign(static_cast<std::size_t>(lv) * m_max_, 0u);
       in.read(reinterpret_cast<char*>(updeg_[static_cast<std::size_t>(i)].data()),
               static_cast<std::streamsize>(static_cast<std::size_t>(lv) * sizeof(std::uint32_t)));
       in.read(reinterpret_cast<char*>(upper_[static_cast<std::size_t>(i)].data()),
               static_cast<std::streamsize>(static_cast<std::size_t>(lv) * m_max_ * sizeof(ItemId)));
+      if (!in) return false;
+      for (int layer = 0; layer < lv; ++layer) {
+        const auto degree = updeg_[static_cast<std::size_t>(i)][static_cast<std::size_t>(layer)];
+        if (degree > static_cast<unsigned>(m_max_)) return false;
+        for (std::uint32_t j = 0; j < degree; ++j) {
+          const auto id = upper_[static_cast<std::size_t>(i)][static_cast<std::size_t>(layer) * m_max_ + j];
+          if (id >= static_cast<unsigned>(n_) || level_[id] < layer + 1) return false;
+        }
+      }
     }
     node_locks_.clear();
-    return static_cast<bool>(in);
+    return static_cast<bool>(in) && in.tellg() == file_end && level_[entry_] == max_level_;
   }
 
  private:

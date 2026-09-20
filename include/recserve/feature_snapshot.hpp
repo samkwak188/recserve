@@ -11,15 +11,15 @@
 // Execution History to Solve Concurrency Problems", PDCS 1998; the same shape
 // as the Linux kernel's rcu_dereference / synchronize_rcu):
 //
-//   - Two tables. Readers take an acquire load of a pointer, then read freely.
-//     No mutex, no atomic RMW on the read path.
+//   - Two tables. A reader reserves a hazard slot, publishes the table pointer,
+//     and rechecks the live pointer before dereferencing. No mutex is held.
 //   - The ingest thread accumulates deltas and publishes on an interval: apply
 //     deltas to the back table, release-store it as live, wait out the grace
 //     period, then replay the same deltas into the now-quiescent old table so
 //     the two stay identical.
-//   - The grace period is explicit, not assumed: each reader publishes the
-//     generation it is reading in a per-thread slot, and the writer waits until
-//     no slot still holds the previous generation before touching it.
+//   - Sequentially consistent hazard publication and pointer validation close
+//     the reader/writer race. Slots belong to guards, not threads or reused
+//     store addresses. Nested reads and thread churn cannot alias a live slot.
 //
 // The cost this design makes visible: a feature written at time T is not
 // readable until the next publish, so end-to-end freshness is bounded below by
@@ -32,40 +32,43 @@
 #include <thread>
 #include <vector>
 #include <cstdint>
+#include <stdexcept>
 
 namespace recserve {
 
 inline constexpr int kMaxReaders = 128;
-inline constexpr std::uint64_t kReaderIdle = ~0ull;
+struct FeatureTable;
 
-// Per-thread slot publishing which generation this thread is reading.
+// Bounded hazard registry. Exhaustion is explicit; never overwrite another reader.
 class ReaderRegistry {
  public:
-  ReaderRegistry() {
-    for (auto& s : slots_) s.gen.store(kReaderIdle, std::memory_order_relaxed);
-  }
-
   int acquire_slot() {
-    const int id = next_.fetch_add(1, std::memory_order_relaxed);
-    return id % kMaxReaders;
+    for (int i = 0; i < kMaxReaders; ++i) {
+      bool expected = false;
+      if (slots_[static_cast<std::size_t>(i)].claimed.compare_exchange_strong(expected, true))
+        return i;
+    }
+    throw std::runtime_error("feature snapshot reader limit reached");
   }
 
-  void enter(int slot, std::uint64_t gen) {
-    slots_[static_cast<std::size_t>(slot)].gen.store(gen, std::memory_order_release);
+  void enter(int slot, const FeatureTable* table) {
+    slots_[static_cast<std::size_t>(slot)].table.store(table);
   }
 
   void leave(int slot) {
-    slots_[static_cast<std::size_t>(slot)].gen.store(kReaderIdle, std::memory_order_release);
+    auto& s = slots_[static_cast<std::size_t>(slot)];
+    s.table.store(nullptr);
+    s.claimed.store(false);
   }
 
   // Spin until nobody is still inside `gen`. Readers hold a snapshot for the
   // length of one request, so this returns in microseconds; the yield keeps it
   // from burning a core if a reader is descheduled mid-request.
-  void wait_for_quiescence(std::uint64_t gen) const {
+  void wait_for_quiescence(const FeatureTable* table) const {
     for (;;) {
       bool busy = false;
       for (const auto& s : slots_) {
-        if (s.gen.load(std::memory_order_acquire) == gen) {
+        if (s.table.load() == table) {
           busy = true;
           break;
         }
@@ -81,10 +84,10 @@ class ReaderRegistry {
 #pragma warning(disable : 4324)  // padding from alignas is the entire point here
 #endif
   struct alignas(64) Slot {  // one cache line each: no false sharing between readers
-    std::atomic<std::uint64_t> gen{kReaderIdle};
+    std::atomic<const FeatureTable*> table{nullptr};
+    std::atomic<bool> claimed{false};
   };
   std::array<Slot, kMaxReaders> slots_{};
-  std::atomic<int> next_{0};
 };
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -148,14 +151,11 @@ class FeatureSnapshotStore {
   class Guard {
    public:
     Guard(const FeatureSnapshotStore& s, int slot) : store_(&s), slot_(slot) {
-      // Publish intent, then read the pointer. The writer waits for this slot
-      // to clear before it touches the table this pointer names.
+      // Never inspect non-atomic table fields until the hazard is validated.
       for (;;) {
-        const std::uint64_t g = store_->gen_.load(std::memory_order_acquire);
-        store_->readers_.enter(slot_, g);
-        table_ = store_->live_.load(std::memory_order_acquire);
-        if (table_->generation == g) break;  // no publish slipped in between
-        store_->readers_.leave(slot_);
+        table_ = store_->live_.load();
+        store_->readers_.enter(slot_, table_);
+        if (table_ == store_->live_.load()) break;
       }
     }
     ~Guard() { store_->readers_.leave(slot_); }
@@ -172,8 +172,8 @@ class FeatureSnapshotStore {
   };
 
   Guard read() const {
-    thread_local int slot = readers_.acquire_slot();
-    return Guard(*this, slot);
+    if (!live_.load()) throw std::logic_error("feature snapshot is not initialized");
+    return Guard(*this, readers_.acquire_slot());
   }
 
   // Writer side. Single ingest thread.
@@ -192,11 +192,11 @@ class FeatureSnapshotStore {
     back->generation = new_gen;
 
     gen_.store(new_gen, std::memory_order_release);
-    live_.store(back, std::memory_order_release);
+    live_.store(back);
 
     // Grace period: nobody may still be reading the table we are about to
     // mutate back into agreement.
-    readers_.wait_for_quiescence(new_gen - 1);
+    readers_.wait_for_quiescence(front);
     for (const auto& d : pending_) front->apply(d);
     front->generation = new_gen;
 

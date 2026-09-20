@@ -36,7 +36,10 @@ namespace recserve {
 
 bool send_all(socket_t s, const std::uint8_t* p, std::size_t n);
 bool recv_all(socket_t s, std::uint8_t* p, std::size_t n);
-socket_t listen_tcp(std::uint16_t port);
+socket_t listen_tcp(std::uint16_t port, const char* bind_address = "127.0.0.1");
+bool net_nonblocking(socket_t s);
+bool net_ready(socket_t s, bool write, int timeout_ms);
+bool transfer_until(socket_t s, std::uint8_t* data, std::size_t n, bool write, std::uint64_t deadline_us);
 socket_t accept_tcp(socket_t server);
 socket_t connect_tcp(const char* host, std::uint16_t port);
 

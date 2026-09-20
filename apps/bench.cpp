@@ -69,12 +69,12 @@ static void usage() {
                "               [--load-catalog P] [--load-index P] [--recall-probe N] [--json]\n";
 }
 
-int main(int argc, char** argv) {
+int bench_main(int argc, char** argv) {
   int items = 4096, dim = 64, nreq = 400, k = 10, retrieve_k = 64, trials = 3, warmup = 64;
   int ef = 64, ef_construction = 64, m = 16, recall_probe = 64, workers = 0, clusters = 0;
   int build_threads = 0;
-  bool json = false, brute = false, pin = false, arena = true;
-  std::string mode = "baseline", kernel_arg, load_catalog, load_index;
+  bool json = false, brute = false, pin = false, arena = true, sequential_recall = false;
+  std::string mode = "baseline", kernel_arg, load_catalog, load_index, load_queries;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -96,6 +96,8 @@ int main(int argc, char** argv) {
     else if (a == "--clusters" && i + 1 < argc) clusters = std::atoi(argv[++i]);
     else if (a == "--load-catalog" && i + 1 < argc) load_catalog = argv[++i];
     else if (a == "--load-index" && i + 1 < argc) load_index = argv[++i];
+    else if (a == "--load-queries" && i + 1 < argc) load_queries = argv[++i];
+    else if (a == "--sequential-recall") sequential_recall = true;
     else if (a == "--brute") brute = true;
     else if (a == "--pin") pin = true;
     else if (a == "--no-arena") arena = false;
@@ -107,12 +109,18 @@ int main(int argc, char** argv) {
   // Mode presets keep the published board comparable across runs; explicit
   // flags win when the agent is driving.
   Kernel kern = Kernel::Scalar;
+  if (items <= 0 || dim <= 0 || dim > 4096 || nreq <= 0 || trials <= 0 || warmup < 0 ||
+      k <= 0 || k > static_cast<int>(kMaxK) || retrieve_k < k || retrieve_k > 65536 || ef <= 0 || m <= 1)
+    throw std::invalid_argument("invalid benchmark shape or request settings");
   if (mode == "simd") kern = Kernel::Simd;
   else if (mode == "soa") kern = Kernel::SoaStrided;
   else if (mode == "blocked") kern = Kernel::Blocked;
   else if (mode == "int8") kern = Kernel::Int8;
   else if (mode == "pin") { kern = Kernel::Simd; pin = true; }
   else if (mode == "arena") kern = Kernel::Simd;
+  else if (mode != "baseline") throw std::invalid_argument("unknown mode: " + mode);
+  if (pin && !pin_current_thread()) throw std::runtime_error("could not pin benchmark thread");
+  if (workers != 0) throw std::invalid_argument("--workers has no effect in this synchronous harness");
   if (!kernel_arg.empty()) kern = kernel_from_string(kernel_arg);
 
   Engine e;
@@ -138,6 +146,7 @@ int main(int argc, char** argv) {
     e.init_random(items, 4096, dim, 13, clusters);
   }
   const double load_s = static_cast<double>(now_us() - t_load0) / 1e6;
+  if (!load_queries.empty() && !e.load_queries(load_queries)) throw std::runtime_error("query loading failed");
 
   Histogram p99s, qpss;
   Trial last{};
@@ -151,7 +160,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  const double recall = recall_probe > 0 ? e.measure_retrieve_recall(k, recall_probe) : -1.0;
+  const double recall = recall_probe > 0 ? e.measure_retrieve_recall(k, recall_probe, 7, sequential_recall) : -1.0;
   const double e2e_recall =
       recall_probe > 0 ? e.measure_response_recall(k, retrieve_k, recall_probe) : -1.0;
   const double rss_mib = static_cast<double>(process_rss_bytes()) / (1024.0 * 1024.0);
@@ -185,4 +194,9 @@ int main(int argc, char** argv) {
               << " rss_mib=" << rss_mib << "\n";
   }
   return 0;
+}
+
+int main(int argc, char** argv) {
+  try { return bench_main(argc, argv); }
+  catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 2; }
 }

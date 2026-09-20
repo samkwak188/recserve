@@ -81,15 +81,19 @@ def main() -> int:
     ap.add_argument("--quality-prefix", default="",
                     help="ml25m or mlsmall; defaults to ml25m when prepared")
     ap.add_argument("--out", default="results/measured.json")
+    ap.add_argument("--board", default="COST.md")
     args = ap.parse_args()
 
     if args.board_only:
         payload = json.loads((ROOT / args.out).read_text())
-        write_board(payload)
-        print(f"-> {ROOT / 'COST.md'}")
+        write_board(payload, args.board)
+        print(f"-> {ROOT / args.board}")
         return 0
 
     stages = args.stages or (QUICK if args.quick else ALL_STAGES)
+    unknown = set(stages) - set(ALL_STAGES)
+    if unknown:
+        ap.error(f"unknown stages: {sorted(unknown)}")
     # Merge into whatever is already there. Running a single stage used to
     # rewrite the file from scratch and silently drop every other result.
     payload: dict = {}
@@ -98,7 +102,10 @@ def main() -> int:
         try:
             payload = json.loads(existing.read_text())
         except json.JSONDecodeError:
-            payload = {}
+            ap.error(f"invalid results file: {existing}; refusing to overwrite")
+    previous = payload.get("host", {})
+    if previous and (previous.get("os"), previous.get("machine")) != (platform.platform(), platform.machine()):
+        ap.error("results belong to another host; use --out and --board for a new campaign")
     payload.update({
         "host": {
             "os": platform.platform(), "machine": platform.machine(),
@@ -242,12 +249,12 @@ def main() -> int:
     out = ROOT / args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2) + "\n")
-    write_board(payload)
-    print(f"\n-> {out}\n-> {ROOT / 'COST.md'}")
+    write_board(payload, args.board)
+    print(f"\n-> {out}\n-> {ROOT / args.board}")
     return 0
 
 
-def write_board(p: dict) -> None:
+def write_board(p: dict, destination: str = "COST.md") -> None:
     h = p["host"]
     L: list[str] = []
     A = L.append
@@ -474,7 +481,9 @@ def write_board(p: dict) -> None:
         A("")
 
     A("Do not restate any of this as production QPS, multi-region serving, or trained-model quality.")
-    (ROOT / "COST.md").write_text("\n".join(L) + "\n")
+    board = ROOT / destination
+    board.parent.mkdir(parents=True, exist_ok=True)
+    board.write_text("\n".join(L) + "\n")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,15 @@ namespace recserve {
 inline constexpr std::size_t kReqBytes = 24;
 inline constexpr std::size_t kRespHeaderBytes = 16;
 
+inline bool valid_frame_header(const std::uint8_t* p, bool response = false) {
+  std::uint32_t magic = 0, len = 0;
+  std::memcpy(&magic, p, 4);
+  std::memcpy(&len, p + 4, 4);
+  return magic == kProtocolMagic &&
+      (response ? (len >= kRespHeaderBytes && len <= kRespHeaderBytes + kMaxK * 8 &&
+                   (len - kRespHeaderBytes) % 8 == 0) : len == kReqBytes);
+}
+
 inline std::vector<std::uint8_t> encode_request(const Request& r) {
   std::vector<std::uint8_t> b(8 + kReqBytes, 0);
   std::uint32_t magic = kProtocolMagic;
@@ -25,11 +34,11 @@ inline std::vector<std::uint8_t> encode_request(const Request& r) {
 }
 
 inline bool decode_request(const std::uint8_t* p, std::size_t n, Request& r) {
-  if (n < 8 + kReqBytes) return false;
+  if (n != 8 + kReqBytes) return false;
   std::uint32_t magic = 0, len = 0;
   std::memcpy(&magic, p, 4);
   std::memcpy(&len, p + 4, 4);
-  if (magic != kProtocolMagic || len < kReqBytes) return false;
+  if (magic != kProtocolMagic || len != kReqBytes) return false;
   std::memcpy(&r.id, p + 8, 8);
   std::memcpy(&r.user_id, p + 16, 4);
   std::memcpy(&r.k, p + 20, 4);
@@ -61,14 +70,16 @@ inline bool decode_response(const std::uint8_t* p, std::size_t n, Response& r) {
   std::uint32_t magic = 0, payload = 0;
   std::memcpy(&magic, p, 4);
   std::memcpy(&payload, p + 4, 4);
-  if (magic != kProtocolMagic || n < 8 + payload) return false;
+  if (magic != kProtocolMagic || !valid_frame_header(p, true) ||
+      n != 8 + static_cast<std::size_t>(payload)) return false;
   std::memcpy(&r.id, p + 8, 8);
   std::uint32_t st = 0, nitem = 0;
   std::memcpy(&st, p + 16, 4);
   std::memcpy(&nitem, p + 20, 4);
   r.status = static_cast<Status>(st);
   r.items.clear();
-  if (nitem > kMaxK) return false;
+  if (nitem > kMaxK || payload != kRespHeaderBytes + nitem * 8 ||
+      st > static_cast<std::uint32_t>(Status::Unavailable)) return false;
   for (std::uint32_t i = 0; i < nitem; ++i) {
     ScoredItem it;
     std::memcpy(&it.id, p + 24 + i * 8, 4);

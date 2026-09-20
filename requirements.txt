@@ -1,0 +1,10 @@
+# Python 3.12 CPU training, evaluation and orchestration environment.
+numpy==2.2.6
+scipy==1.15.3
+implicit==0.7.2
+pandas==2.2.3
+hnswlib==0.8.0
+pydantic==2.11.7
+kafka-python==2.2.15
+certifi==2025.8.3
+PyYAML==6.0.2

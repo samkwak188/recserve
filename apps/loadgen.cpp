@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         return;
       }
       std::uint8_t hdr[8];
-      if (!recv_all(s, hdr, 8)) {
+      if (!recv_all(s, hdr, 8) || !valid_frame_header(hdr, true)) {
         net_close(s);
         return;
       }
@@ -76,7 +76,10 @@ int main(int argc, char** argv) {
         return;
       }
       Response r;
-      decode_response(buf.data(), buf.size(), r);
+      if (!decode_response(buf.data(), buf.size(), r)) {
+        net_close(s);
+        return;
+      }
       auto done = Steady::now();
       double us = std::chrono::duration<double, std::micro>(done - send_at).count();
       bool late = done > intended + std::chrono::microseconds(timeout_us);

@@ -20,7 +20,12 @@ jobs:
       - name: build
         run: cmake --build build -j 4
       - name: unit tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          if [ "${{ matrix.sanitizer }}" = thread ]; then
+            setarch "$(uname -m)" -R ctest --test-dir build --output-on-failure
+          else
+            ctest --test-dir build --output-on-failure
+          fi
       - name: quality gate
         run: ./build/recserve_quality --csv data/quality_fixture.csv --k 10
       - name: nearline replay is deterministic
@@ -54,23 +59,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: candidate
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before }}
+          path: base
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install pydantic
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4
-      - name: p99 regression gate
-        run: python scripts/perf_ci.py --bench ./build/recserve_bench --baseline /tmp/perf_baseline.json --write-baseline --items 512 --n 150
-      - name: agent validate-pr verdict
+      - run: cmake -S candidate -B candidate/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-mavx2 -mfma" && cmake --build candidate/build -j 4
+      - run: cmake -S base -B base/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-mavx2 -mfma" && cmake --build base/build -j 4
+      - name: negative gate tests
+        run: python -m unittest discover -s candidate/tests -p 'test_*.py'
+      - name: paired base versus candidate regression gate
         run: |
-          python scripts/agent.py --validate-pr --items 16384 --dim 64 --clusters 256 \
-            --n 400 --trials 3 --recall-probe 32 --baseline /tmp/agent_baseline.json
+          python candidate/scripts/regression_gate.py --base-bench "$PWD/base/build/recserve_bench" \
+            --candidate-bench "$PWD/candidate/build/recserve_bench" \
+            --fixture "$PWD/candidate/build/recserve_fixture"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paired-regression-evidence
+          path: .cache/logs/regression.json
       - name: agent loop runs end to end without an API key
+        working-directory: candidate
         # The heuristic, random and grid planners must work with no credentials;
         # the LLM planner falls back to heuristic rather than failing the run.
         run: |
           python scripts/agent.py --planner heuristic --iterations 3 --items 16384 \
             --dim 64 --clusters 256 --n 400 --trials 3 --recall-probe 32 \
             --calibrate-repeats 3 --confirm-repeats 0
+
+  avx2-and-portability:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+        avx2: ["ON", "OFF"]
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_AVX2=${{ matrix.avx2 }}
+      - run: cmake --build build --config Release -j 4
+      - run: ctest --test-dir build -C Release --output-on-failure
+
+  cuda-compile-only:
+    runs-on: ubuntu-24.04
+    container: nvidia/cuda:13.1.1-devel-ubuntu24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y cmake ninja-build g++ python3
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86
+      - run: cmake --build build -j 4
+      # No GPU is present here. GPU runtime/sanitizer evidence comes from gpu.yml.
+
+  portable-container:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t recserve:test .
 
   # The Flink job is the offline half of a feature the online path computes
   # incrementally. This asserts the plain-Python reference agrees with the C++
