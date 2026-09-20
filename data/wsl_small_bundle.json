@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "model_version": "wsl-movielens-small-v1",
+  "files": {
+    "wsl_small_catalog.bin": "520de2c68ae9ad035ef60a42c22871106368444388d5b1e1fac22f1ea2f95dd3",
+    "wsl_small_queries.bin": "534ad056e6930d21d58b79aa310ef6f4f601a18b5a074d6c1b9c0efd9adb6405",
+    "wsl_small_test.csv": "ed94f768cfa679d5adfcf606e077fcffe2baf8d93dcb1489b203508623f43919",
+    "wsl_small_train.csv": "6c89b2fae0e19b5be3998d2fb2a524f79152d283f0bab01213c328f4e810f52f",
+    "wsl_small_user_ids.csv": "bd2ad5c736b12049c2da9e8e87b642aee1317670a2b07ff46e2284a05a1f5fc9",
+    "wsl_small_item_ids.csv": "ae11b9506c2249c31d24f18ab0d409211b3adedb7518741423541751ac6aa3d1",
+    "wsl_small_meta.json": "c65cd61bacb80ae664725dc24f4d317046ae9b63e5368b03859944c8222441e7",
+    "wsl_small_index.bin": "b7265d1915904b659f1e6be934359f0fd6b120e9730f36a6b4688727510043d7"
+  },
+  "catalog": "wsl_small_catalog.bin",
+  "queries": "wsl_small_queries.bin",
+  "index": "wsl_small_index.bin",
+  "user_map": "wsl_small_user_ids.csv",
+  "item_map": "wsl_small_item_ids.csv",
+  "training_meta": "wsl_small_meta.json"
+}

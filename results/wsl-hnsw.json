@@ -1,0 +1,54 @@
+{
+  "items": 32768,
+  "dim": 64,
+  "clusters": 512,
+  "m": 16,
+  "ef_construction": 100,
+  "k": 10,
+  "queries": 128,
+  "recserve_build": {
+    "items": 32768,
+    "dim": 64,
+    "clusters": 512,
+    "m": 16,
+    "ef_construction": 100,
+    "build_s": 2.66189,
+    "build_threads": 1,
+    "max_level": 4,
+    "dist_calls": 68682200,
+    "avg_degree": 25.1888,
+    "graph_mib": 4.26227,
+    "catalog_mib": 8
+  },
+  "rows": [
+    {
+      "ef": 32,
+      "hnswlib_recall": 0.48671875,
+      "recserve_recall": 0.485156,
+      "delta": -0.0015627500000000016,
+      "recserve_p99_us": 103.56
+    },
+    {
+      "ef": 64,
+      "hnswlib_recall": 0.653125,
+      "recserve_recall": 0.646094,
+      "delta": -0.0070310000000000095,
+      "recserve_p99_us": 96.07
+    },
+    {
+      "ef": 128,
+      "hnswlib_recall": 0.8187500000000001,
+      "recserve_recall": 0.8125,
+      "delta": -0.006250000000000089,
+      "recserve_p99_us": 113.06
+    },
+    {
+      "ef": 256,
+      "hnswlib_recall": 0.940625,
+      "recserve_recall": 0.942188,
+      "delta": 0.001562999999999981,
+      "recserve_p99_us": 216.06
+    }
+  ],
+  "max_abs_delta": 0.0070310000000000095
+}

@@ -1,5 +1,35 @@
 # Agent handoff
 
+## Continuation checkpoint: 2026-09-20
+
+Read `EXECUTION_PLAN.md`, `OPERATIONS.md` and `results/EXECUTION_REPORT.md` first.
+Runtime commit `7e0eb63` adds actual RTX 3060 CUDA exact retrieval, GPU batching,
+bounded serving, integrity-checked model bundles, safety repairs and CPU container
+validation. All 16 expanded hosted jobs passed in run 35541070732. Local CUDA
+functional tests pass; Compute Sanitizer is blocked by the Windows debugger
+interface and requires owner approval, not a skipped-green gate. The manually
+dispatched GPU workflow has no registered persistent owner runner.
+
+Follow-up `4651d0d` fixes clean-disconnect metrics and constrains CI dependencies;
+all 16 jobs passed again (run 35542148547). Measurement reports identify their
+original runtime checkpoint rather than silently relabeling older measurements.
+
+Use existing Ubuntu WSL on this Windows/Ryzen/RTX workstation. Commands and full
+logs live in `scripts/` and `.cache/logs/`. CPU sanitizer matrix passes; WSL TSan
+uses `RECSERVE_TSAN_NO_ASLR=1` for a process-only workaround. Never change global
+ASLR or Windows GPU debugger settings without approval.
+
+The original handoff below is historical (2026-09-17 ARM host), retained for its
+design context and traps. Its GPU-not-done statement, test count, and old next
+task are superseded. Preserve its ARM measurement artifacts. Use separate WSL
+results and never equate preformed-batch QPS with online service capacity.
+
+Next work is the gated R1-R5 roadmap, especially a chosen pilot and durable
+event-to-response/eligibility parity. Do not claim production readiness or online
+user lift from the offline MovieLens experiment.
+
+---
+
 Working notes for whoever picks this repo up next, human or agent. Written at
 the end of a session that took RecServe from a benchmarked prototype to a
 project where every claim has a measurement or a CI job behind it. The next

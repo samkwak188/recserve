@@ -1,0 +1,43 @@
+{
+  "prefix": "wsl_small",
+  "k": 10,
+  "items": 6298,
+  "dim": 32,
+  "eval_users": 579,
+  "mean_gold": 16.322970639032814,
+  "recall_ceiling": 0.6126335837477516,
+  "baselines": {
+    "random": {
+      "recall": 0.0020152972628434693,
+      "ndcg": 0.0022701936089518575
+    },
+    "most_popular": {
+      "recall": 0.04549060495404304,
+      "ndcg": 0.062329710967554644
+    },
+    "als_exact": {
+      "recall": 0.06393931500376512,
+      "ndcg": 0.06747743208620752
+    }
+  },
+  "als_lift_over_popularity": 0.01844871004972208,
+  "cpp": {
+    "users": 579,
+    "skipped": 0,
+    "k": 10,
+    "items": 6298,
+    "dim": 32,
+    "kernel": "simd",
+    "ef": 128,
+    "retrieve_k": 256,
+    "brute": 1,
+    "recall_at_k": 0.0639393,
+    "ndcg_at_k": 0.0674774,
+    "retrieve_recall": 0.999827,
+    "filtered_seen": 12045,
+    "p50_us": 65,
+    "p99_us": 116.44,
+    "rss_mib": 5.375
+  },
+  "cpp_mode": "exact scan"
+}

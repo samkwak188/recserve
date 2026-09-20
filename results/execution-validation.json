@@ -1,0 +1,491 @@
+{
+  "recorded_utc": "2026-09-20T22:39:31.468369+00:00",
+  "runtime_commit": "7e0eb632da22f42a96a006b1652afc5b19c48ed8",
+  "receipts": {
+    "baseline-tests": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-baseline",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T21:24:09.366187+00:00",
+      "exit_code": 0,
+      "elapsed_s": 1.17,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/baseline-tests.log"
+    },
+    "python-unit": {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "started_utc": "2026-09-20T22:31:30.901045+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/python-unit.log",
+      "exit_code": 0,
+      "elapsed_s": 0.22
+    },
+    "test-none": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-check-none",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:02:21.499543+00:00",
+      "exit_code": 0,
+      "elapsed_s": 4.07,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/test-none.log"
+    },
+    "test-address": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-check-address",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:02:51.613896+00:00",
+      "exit_code": 0,
+      "elapsed_s": 6.63,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/test-address.log"
+    },
+    "test-undefined": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-check-undefined",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:03:28.562783+00:00",
+      "exit_code": 0,
+      "elapsed_s": 4.32,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/test-undefined.log"
+    },
+    "test-thread": {
+      "command": [
+        "setarch",
+        "x86_64",
+        "-R",
+        "ctest",
+        "--test-dir",
+        "build-check-thread",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:03:53.016663+00:00",
+      "exit_code": 0,
+      "elapsed_s": 13.58,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/test-thread.log"
+    },
+    "final-cpu-test": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:09:55.875499+00:00",
+      "exit_code": 0,
+      "elapsed_s": 2.22,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/final-cpu-test.log"
+    },
+    "final-gpu-test": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-gpu",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:09:58.136577+00:00",
+      "exit_code": 0,
+      "elapsed_s": 6.78,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/final-gpu-test.log"
+    },
+    "hnsw-identical-queries": {
+      "command": [
+        ".cache/venv/bin/python",
+        "scripts/validate_hnsw.py",
+        "--items",
+        "32768",
+        "--dim",
+        "64",
+        "--clusters",
+        "512",
+        "--queries",
+        "128",
+        "--out",
+        "results/wsl-hnsw.json"
+      ],
+      "started_utc": "2026-09-20T22:10:05.268172+00:00",
+      "exit_code": 0,
+      "elapsed_s": 6.38,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/hnsw-identical-queries.log"
+    },
+    "movielens-quality": {
+      "command": [
+        ".cache/venv/bin/python",
+        "scripts/eval_baselines.py",
+        "--prefix",
+        "wsl_small",
+        "--k",
+        "10",
+        "--max-cpp-delta",
+        "0.002",
+        "--out",
+        "results/wsl-quality.json"
+      ],
+      "started_utc": "2026-09-20T21:56:49.325745+00:00",
+      "exit_code": 0,
+      "elapsed_s": 0.82,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/movielens-quality.log"
+    },
+    "real-gpu-quality": {
+      "command": [
+        "build-gpu/recserve_eval",
+        "--catalog",
+        "data/wsl_small_catalog.bin",
+        "--queries",
+        "data/wsl_small_queries.bin",
+        "--test",
+        "data/wsl_small_test.csv",
+        "--train",
+        "data/wsl_small_train.csv",
+        "--kernel",
+        "cuda",
+        "--brute",
+        "--json"
+      ],
+      "started_utc": "2026-09-20T22:10:11.689677+00:00",
+      "exit_code": 0,
+      "elapsed_s": 0.62,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/real-gpu-quality.log"
+    },
+    "bundle-create": {
+      "command": [
+        "python3",
+        "scripts/bundle.py",
+        "create",
+        "--manifest",
+        "data/wsl_small_bundle.json",
+        "--meta",
+        "data/wsl_small_meta.json",
+        "--index",
+        "data/wsl_small_index.bin",
+        "--version",
+        "wsl-movielens-small-v1"
+      ],
+      "started_utc": "2026-09-20T22:06:13.159286+00:00",
+      "exit_code": 0,
+      "elapsed_s": 0.27,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/bundle-create.log"
+    },
+    "container-build": {
+      "command": [
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+        "build",
+        "--tag",
+        "recserve:local",
+        "."
+      ],
+      "started_utc": "2026-09-20T22:06:35.123705+00:00",
+      "exit_code": 0,
+      "elapsed_s": 50.81,
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\container-build.log"
+    },
+    "container-smoke": {
+      "command": [
+        "C:\\Users\\samis\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "scripts/check_container.py",
+        "--docker",
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"
+      ],
+      "started_utc": "2026-09-20T22:36:28.141833+00:00",
+      "status": "completed",
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\container-smoke.log",
+      "exit_code": 0,
+      "elapsed_s": 8.41
+    },
+    "paired-regression": {
+      "command": [
+        "python3",
+        "scripts/regression_gate.py",
+        "--base-bench",
+        "build-regression-base/recserve_bench",
+        "--candidate-bench",
+        "build/recserve_bench",
+        "--fixture",
+        "build/recserve_fixture",
+        "--out",
+        "results/wsl-regression.json"
+      ],
+      "started_utc": "2026-09-20T22:12:51.442158+00:00",
+      "exit_code": 0,
+      "elapsed_s": 5.82,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/paired-regression.log"
+    },
+    "final-cpu-quick": {
+      "command": [
+        "python3",
+        "scripts/measure.py",
+        "--quick",
+        "--out",
+        "results/wsl-cpu.json",
+        "--board",
+        "results/WSL_CPU.md"
+      ],
+      "started_utc": "2026-09-20T22:12:57.310194+00:00",
+      "exit_code": 0,
+      "elapsed_s": 38.48,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/final-cpu-quick.log"
+    },
+    "gpu-campaign": {
+      "command": [
+        "python3",
+        "scripts/gpu_campaign.py",
+        "--iterations",
+        "200"
+      ],
+      "started_utc": "2026-09-20T22:13:40.861883+00:00",
+      "exit_code": 0,
+      "elapsed_s": 333.43,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/gpu-campaign.log"
+    },
+    "ann-high-recall": {
+      "command": [
+        "python3",
+        "scripts/ann_quality_campaign.py"
+      ],
+      "started_utc": "2026-09-20T22:22:42.941643+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ann-high-recall.log",
+      "exit_code": 0,
+      "elapsed_s": 59.02
+    },
+    "service-capacity": {
+      "command": [
+        "python3",
+        "scripts/service_campaign.py"
+      ],
+      "started_utc": "2026-09-20T22:19:42.385987+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/service-capacity.log",
+      "exit_code": 0,
+      "elapsed_s": 120.99
+    },
+    "recheck-test-build": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:30:28.742368+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/recheck-test-build.log",
+      "exit_code": 0,
+      "elapsed_s": 2.22
+    },
+    "recheck-test-build-gpu": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-gpu",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:30:52.006382+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/recheck-test-build-gpu.log",
+      "exit_code": 0,
+      "elapsed_s": 6.28
+    },
+    "recheck-test-build-check-thread": {
+      "command": [
+        "setarch",
+        "x86_64",
+        "-R",
+        "ctest",
+        "--test-dir",
+        "build-check-thread",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-20T22:31:18.522849+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/recheck-test-build-check-thread.log",
+      "exit_code": 0,
+      "elapsed_s": 12.34
+    },
+    "container-build-final": {
+      "command": [
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+        "build",
+        "--tag",
+        "recserve:local",
+        "."
+      ],
+      "started_utc": "2026-09-20T22:33:04.006114+00:00",
+      "status": "completed",
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\container-build-final.log",
+      "exit_code": 0,
+      "elapsed_s": 23.55
+    }
+  },
+  "telemetry_checkpoint": "4651d0d8fa66d8b93732a2b21cd8b330eb9f70e1",
+  "hosted_ci": {
+    "sha": "4651d0d8fa66d8b93732a2b21cd8b330eb9f70e1",
+    "runs": [
+      {
+        "id": 35542148547,
+        "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "kafka-integration",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611895",
+            "failed_steps": []
+          },
+          {
+            "name": "perf-gate",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611940",
+            "failed_steps": []
+          },
+          {
+            "name": "avx2-and-portability (windows-2022, ON)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611957",
+            "failed_steps": []
+          },
+          {
+            "name": "build-and-test (address)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611963",
+            "failed_steps": []
+          },
+          {
+            "name": "build-and-test (undefined)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611968",
+            "failed_steps": []
+          },
+          {
+            "name": "avx2-and-portability (ubuntu-24.04, ON)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611975",
+            "failed_steps": []
+          },
+          {
+            "name": "avx2-and-portability (windows-2022, OFF)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611977",
+            "failed_steps": []
+          },
+          {
+            "name": "index-correctness",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611979",
+            "failed_steps": []
+          },
+          {
+            "name": "build-and-test (none)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611984",
+            "failed_steps": []
+          },
+          {
+            "name": "quality-real-data",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611986",
+            "failed_steps": []
+          },
+          {
+            "name": "portable-container",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611988",
+            "failed_steps": []
+          },
+          {
+            "name": "flink-job",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161611992",
+            "failed_steps": []
+          },
+          {
+            "name": "avx2-and-portability (ubuntu-24.04, OFF)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161612007",
+            "failed_steps": []
+          },
+          {
+            "name": "offline-reference",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161612009",
+            "failed_steps": []
+          },
+          {
+            "name": "build-and-test (thread)",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161612024",
+            "failed_steps": []
+          },
+          {
+            "name": "cuda-compile-only",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/samkwak188/recserve/actions/runs/35542148547/job/106161612091",
+            "failed_steps": []
+          }
+        ]
+      }
+    ]
+  },
+  "gpu_sanitizer": {
+    "status": "blocked",
+    "reason": "Windows WDDM GPU debugger interface disabled",
+    "receipt": {
+      "command": [
+        "compute-sanitizer",
+        "--tool",
+        "memcheck",
+        "--error-exitcode",
+        "1",
+        "build-gpu/recserve_gpu_tests"
+      ],
+      "started_utc": "2026-09-20T22:02:56.962746+00:00",
+      "exit_code": 1,
+      "elapsed_s": 0.72,
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/gpu-memcheck.log"
+    }
+  },
+  "limitations": [
+    "no one-hour soak",
+    "no durable event-to-server bridge",
+    "no serving eligibility parity",
+    "no trained reranker or global time split",
+    "no authenticated public API or online pilot",
+    "no GPU runtime container or registered GPU runner",
+    "no measured cloud cost"
+  ]
+}

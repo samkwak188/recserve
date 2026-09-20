@@ -2,6 +2,32 @@
 
 **A C++20 recommendation serving engine you can run, measure, and break.**
 
+## Current checkpoint: 2026-09-20
+
+CUDA retrieval now runs on an RTX 3060: persistent catalog/workspace, tiled FP32
+cuBLAS scoring, device-side top-K, deadline-aware microbatching and exact CPU
+fallback. The internal TCP service now has bounded admission, I/O deadlines,
+health/metrics, graceful shutdown and verified real-data bundles. A non-root,
+read-only CPU container has served the trained model successfully.
+
+All **16 expanded hosted CI jobs** passed for runtime checkpoint `7e0eb63`,
+including Windows/Linux, sanitizers, CUDA compilation, Kafka and Flink:
+[open the run](https://github.com/samkwak188/recserve/actions/runs/35541070732).
+Actual CUDA tests ran locally on the RTX; hosted CUDA CI is compile-only.
+Compute Sanitizer remains blocked by the Windows GPU debugger setting and is
+not claimed as passing. No persistent self-hosted GPU runner was registered.
+
+Start with [the execution plan and remaining release gates](EXECUTION_PLAN.md),
+[local run/rollback instructions](OPERATIONS.md),
+[the new GPU/service measurements](results/EXECUTION_REPORT.md), and
+[the separate x86 CPU board](results/WSL_CPU.md).
+
+This is a hardened **local prototype**, not yet production: durable feature
+recovery and the event-to-server bridge, serving-time seen/availability filters,
+a learned ranker, authentication, long-duration soak, and an opt-in real-user
+pilot remain open. The original ARM results below are historical, not RTX/WSL
+measurements. Never mix the two hosts in a performance claim.
+
 RecServe answers one request: given a user, retrieve a few hundred candidates
 from an HNSW index, rank them with a linear scorer over nearline features, and
 return the top-K. Around that sit the parts that make a serving system a system
@@ -303,7 +329,7 @@ python scripts/measure.py --quick  # the cheap stages only
 Serve and hit it:
 
 ```bash
-build/Release/recserve_server --port 9400 --items 65536 --dim 64
+build/Release/recserve_server --synthetic --port 9400 --items 65536 --dim 64
 build/Release/recserve_loadgen --port 9400 --qps 200 --n 500
 ```
 
@@ -322,7 +348,7 @@ build/Release/recserve_loadgen --port 9400 --qps 200 --n 500
 | `recserve_eval` | recommendation quality on real embeddings, through the request path |
 | `recserve_shard` | sharded scatter-gather retrieval and tail amplification |
 | `recserve_diagnose` | bottleneck classifier |
-| `recserve_tests` | 22 tests: SIMD exactness, quantization error bounds, RCU concurrency, HNSW recall, save/load round trips |
+| `recserve_tests` | 24 core tests; additional GPU, batching, artifact, bundle and real-socket suites run through CTest/Python |
 
 ## Scripts
 
@@ -393,13 +419,16 @@ docker rather than on the host the latency numbers came from.
 
 ## CI
 
-Seven jobs, all green:
+The workflow expands to 16 jobs; all passed at checkpoint `7e0eb63`:
 
 | job | what it proves |
 |---|---|
 | `build-and-test` | builds and tests under none/ASan/UBSan/TSan |
 | `index-correctness` | RecServe HNSW tracks hnswlib on identical data |
-| `perf-gate` | p99 regression gate + the agent's `--validate-pr` verdict |
+| `perf-gate` | interleaved base/candidate measurements, negative gates and a credential-free agent loop |
+| `avx2-and-portability` | Windows/Linux builds with explicit AVX2 ON/OFF |
+| `cuda-compile-only` | CUDA toolchain compiles all targets; no GPU execution claim |
+| `portable-container` | build and execute tests inside the CPU image |
 | `offline-reference` | C++ online aggregate == Python batch aggregate |
 | `kafka-integration` | real broker, real librdkafka consumer, lag and freshness are real |
 | `flink-job` | the Flink job runs and its output equals the reference exactly |
@@ -417,20 +446,22 @@ anything.
 Stated plainly, because the gap between "written" and "verified" is where
 projects like this usually mislead.
 
-- **No GPU scoring.** The JD-shaped version of this project would measure the
-  batch size at which GPU ranking overtakes CPU. The development host has a
-  Qualcomm Adreno integrated GPU and no CUDA toolkit, and GitHub's hosted
-  runners have no GPU, so there is nowhere to run it. Unrunnable CUDA in the
-  tree would be worth less than this paragraph.
+- **GPU release validation is incomplete.** Actual CUDA correctness and socket
+  batching pass, but Compute Sanitizer needs an approved Windows debugger setting.
+  GPU throughput crossover is not a proof of online latency or cloud economics.
+- **No durable end-to-end feature service.** The Kafka/nearline demonstration is
+  not yet a recoverable event-to-response pipeline wired into the deployed server.
+- **No public production API.** TCP IDs are internal rows, and serving-time
+  eligibility filters, auth/TLS, cold start and real-user outcome logging remain.
 - **Shards are threads, not hosts.** No network, no separate failure domain, no
   cross-host variance. The tail amplification numbers are a lower bound.
 - **No cross-region replication.** One process, one machine.
 - **The ranker is four hand-set weights.** Item embeddings are trained (ALS);
   the ranking model on top of them is not. This serves a model, it does not
   learn one.
-- **Prices are on-demand list.** Real fleets run reserved or spot and pay
-  materially less, so every dollar figure is a ceiling and a relative
-  comparison, not a quote.
+- **Historical cost estimates are not quotes.** They are compute-only models
+  using their recorded instance assumptions, not verified current all-in costs.
+  The RTX experiment supplies no measured cloud-GPU dollar-per-query claim.
 
 Everything else in this README is produced by `python scripts/measure.py` on the
 host named at the top, or by a CI job you can open and read.
