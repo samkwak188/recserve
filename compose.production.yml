@@ -1,0 +1,138 @@
+x-service: &service
+  restart: unless-stopped
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  read_only: true
+  tmpfs: [/tmp:size=32m]
+  pids_limit: 96
+  stop_grace_period: 15s
+  logging:
+    driver: ${LOG_DRIVER:-journald}
+  networks: [private]
+
+x-app-env: &app-env
+  APP_ORIGIN: https://${APP_HOSTNAME:?Set APP_HOSTNAME}
+  DATABASE_URL_FILE: /run/secrets/database_url
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID}
+  GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
+  MODEL_BUNDLE: /model/manifest.json
+  TRUSTED_PROXY_NETWORK: 172.30.87.0/24
+  PRIVACY_S3_ENDPOINT: ${PRIVACY_S3_ENDPOINT:?Set PRIVACY_S3_ENDPOINT}
+  PRIVACY_S3_REGION: ${PRIVACY_S3_REGION:?Set PRIVACY_S3_REGION}
+  PRIVACY_S3_BUCKET: ${PRIVACY_S3_BUCKET:?Set PRIVACY_S3_BUCKET}
+  PRIVACY_S3_ACCESS_KEY_ID_FILE: /run/secrets/privacy_access_key
+  PRIVACY_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/privacy_secret_key
+  PRIVACY_FERNET_KEY_FILE: /run/secrets/privacy_fernet_key
+
+x-app-secrets: &app-secrets
+  [database_url, google_client_secret, privacy_access_key, privacy_secret_key, privacy_fernet_key]
+
+services:
+  postgres:
+    <<: *service
+    image: ${DATABASE_IMAGE:?Set immutable DATABASE_IMAGE}
+    mem_limit: 512m
+    cpus: 1
+    tmpfs: [/tmp:size=32m, "/var/run/postgresql:uid=999,gid=999,mode=3775,size=8m"]
+    environment:
+      POSTGRES_USER: recserve_owner
+      POSTGRES_DB: recserve
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+    secrets: [postgres_password, pgbackrest_config]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    command: [postgres, -c, shared_buffers=128MB, -c, max_connections=40, -c, work_mem=4MB, -c, wal_level=replica, -c, archive_mode=on, -c, archive_timeout=60s, -c, "archive_command=pgbackrest --config=/run/secrets/pgbackrest_config --stanza=recserve archive-push %p"]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U recserve_owner -d recserve]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  migrate:
+    <<: *service
+    image: ${APP_IMAGE_BLUE:?Set immutable APP_IMAGE_BLUE}
+    restart: 'no'
+    command: [migrate]
+    mem_limit: 256m
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+      MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
+    secrets: [database_url, migration_database_url]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  retrieval-blue:
+    <<: *service
+    image: ${APP_IMAGE_BLUE:?Set immutable APP_IMAGE_BLUE}
+    command: [retrieval]
+    mem_limit: 256m
+    cpus: 1
+    environment: {MODEL_BUNDLE: /model/manifest.json}
+    volumes: ["${MODEL_DIR_BLUE:?Set MODEL_DIR_BLUE}:/model:ro"]
+
+  api-blue:
+    <<: *service
+    image: ${APP_IMAGE_BLUE:?Set immutable APP_IMAGE_BLUE}
+    mem_limit: 384m
+    cpus: 1
+    environment:
+      <<: *app-env
+      RETRIEVAL_HOST: retrieval-blue
+    secrets: *app-secrets
+    volumes: ["${MODEL_DIR_BLUE:?Set MODEL_DIR_BLUE}:/model:ro"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      retrieval-blue: {condition: service_started}
+
+  retrieval-green:
+    <<: *service
+    profiles: [green]
+    image: ${APP_IMAGE_GREEN:-${APP_IMAGE_BLUE}}
+    command: [retrieval]
+    mem_limit: 256m
+    cpus: 1
+    environment: {MODEL_BUNDLE: /model/manifest.json}
+    volumes: ["${MODEL_DIR_GREEN:-${MODEL_DIR_BLUE}}:/model:ro"]
+
+  api-green:
+    <<: *service
+    profiles: [green]
+    image: ${APP_IMAGE_GREEN:-${APP_IMAGE_BLUE}}
+    mem_limit: 384m
+    cpus: 1
+    environment:
+      <<: *app-env
+      RETRIEVAL_HOST: retrieval-green
+    secrets: *app-secrets
+    volumes: ["${MODEL_DIR_GREEN:-${MODEL_DIR_BLUE}}:/model:ro"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      retrieval-green: {condition: service_started}
+
+  web:
+    <<: *service
+    image: ${WEB_IMAGE:?Set immutable WEB_IMAGE}
+    mem_limit: 96m
+    cpus: .5
+    environment: {APP_HOSTNAME: "${APP_HOSTNAME}"}
+    ports: ["80:8080", "443:8443"]
+    volumes: [caddy_data:/data, caddy_config:/config, "${ROUTING_DIR:?Set ROUTING_DIR}:/etc/recserve:ro"]
+    depends_on: [api-blue]
+
+networks:
+  private:
+    ipam:
+      config: [{subnet: 172.30.87.0/24}]
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+secrets:
+  postgres_password: {file: "${SECRETS_DIR:?Set SECRETS_DIR}/postgres_password"}
+  database_url: {file: "${SECRETS_DIR}/database_url"}
+  migration_database_url: {file: "${SECRETS_DIR}/migration_database_url"}
+  google_client_secret: {file: "${SECRETS_DIR}/google_client_secret"}
+  privacy_access_key: {file: "${SECRETS_DIR}/privacy_access_key"}
+  privacy_secret_key: {file: "${SECRETS_DIR}/privacy_secret_key"}
+  privacy_fernet_key: {file: "${SECRETS_DIR}/privacy_fernet_key"}
+  pgbackrest_config: {file: "${SECRETS_DIR}/pgbackrest_config"}

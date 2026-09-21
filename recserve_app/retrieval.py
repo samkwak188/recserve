@@ -10,6 +10,25 @@ MAGIC = 0x52535632
 class Retrieval:
     def __init__(self, host, port, digest, dim):
         self.host, self.port, self.digest, self.dim = host, port, digest, dim
+        # Resolve during paired-service startup, never on a latency-bounded request.
+        # Recreating retrieval with a different address requires restarting its API pair.
+        self.addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+
+    def connect(self, deadline):
+        error = OSError('No retrieval address')
+        for family, kind, protocol, _, address in self.addresses:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('Retrieval deadline expired')
+            connection = socket.socket(family, kind, protocol)
+            connection.settimeout(remaining)
+            try:
+                connection.connect(address)
+                return connection
+            except OSError as exc:
+                connection.close()
+                error = exc
+        raise error
 
     def query(self, vector, count, deadline=None):
         deadline = deadline or time.monotonic() + .2
@@ -17,10 +36,13 @@ class Retrieval:
         if remaining <= 0:
             raise TimeoutError('Retrieval deadline expired')
         rid = secrets.randbits(64)
-        payload = struct.pack('<QIII32s', rid, min(1000000, max(1, int(remaining * 1e6))),
-                              self.dim, count, bytes.fromhex(self.digest)) + struct.pack('<' + 'f' * self.dim, *vector)
-        with socket.create_connection((self.host, self.port), timeout=remaining) as connection:
-            connection.settimeout(max(.001, deadline - time.monotonic()))
+        with self.connect(deadline) as connection:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('Retrieval deadline expired')
+            payload = struct.pack('<QIII32s', rid, min(1000000, max(1, int(remaining * 1e6))),
+                                  self.dim, count, bytes.fromhex(self.digest)) + struct.pack('<' + 'f' * self.dim, *vector)
+            connection.settimeout(remaining)
             connection.sendall(struct.pack('<II', MAGIC, len(payload)) + payload)
 
             def receive(n):

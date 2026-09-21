@@ -130,3 +130,20 @@ Generated screenshots are under `.cache/production/browser/<run>/`; they are
 test-fixture views, not real users or a public deployment. The fixture's
 self-signed certificate exception is limited to Playwright test configuration.
 Production uses Caddy and trusted HTTPS certificates.
+
+## Operations implementation
+
+`scripts/Run-Production.ps1 -Stage operations` builds pinned-base, nonroot
+application/web/database images and exercises their real entrypoints. The
+container suite uses a local HTTPS storage transport fixture and synthetic
+accounts. A separate encrypted pgBackRest drill kills and restores PostgreSQL
+into a fresh volume, including a WAL-only post-backup record and wrong-key
+rejection. Reports keep immutable image IDs and source fingerprints.
+
+See `deploy/README.md` for the configuration boundary, secret separation,
+deletion replay, retention caveats and blue/green rollback procedure. Compose
+is a deployment definition, not evidence of a deployed service. Real off-host
+storage, live Google configuration, cloud resource limits and owner approvals
+are still mandatory. Infrastructure provisioning, the external monitoring and
+alert path, full qualification/release gating, and the 30-day pilot remain
+unfinished; local integration receipts do not substitute for them.

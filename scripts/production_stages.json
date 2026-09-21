@@ -23,6 +23,14 @@
     "artifacts": [".cache/production/quality/small-*/report.json", ".cache/production/quality/small-*/release/*"],
     "commands": [{"name": "quality", "argv": ["{python}", "scripts/quality_production.py"], "timeout_s": 1800}]
   },
+  "operations": {
+    "artifacts": [".cache/production/images/*/images.json", ".cache/production/operations/*/report.json", ".cache/production/recovery/*/report.json"],
+    "commands": [
+      {"name": "configure", "argv": ["cmake", "-S", ".", "-B", "build-production", "-DCMAKE_BUILD_TYPE=Release", "-DRECSERVE_WITH_CUDA=OFF"]},
+      {"name": "build-fixture", "argv": ["cmake", "--build", "build-production", "--target", "recserve_fixture", "-j", "4"], "timeout_s": 900},
+      {"name": "container-proofs", "argv": ["{python}", "scripts/operations_production.py"], "timeout_s": 3000}
+    ]
+  },
   "qualification": {"commands": [{"name": "qualification", "argv": ["{python}", "scripts/qualify_production.py"], "timeout_s": 7200}]},
   "release-check": {"commands": [{"name": "release-gates", "argv": ["{python}", "scripts/release_production.py"]}]}
 }

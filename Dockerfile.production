@@ -1,0 +1,40 @@
+FROM python@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS cpp
+RUN apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY CMakeLists.txt ./
+COPY include include
+COPY src src
+COPY apps apps
+COPY tests tests
+RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRECSERVE_WITH_CUDA=OFF -DRECSERVE_WITH_AVX2=OFF && cmake --build build --target recserve_server -j 4
+
+FROM python@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS app
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home recserve
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
+WORKDIR /app
+COPY requirements-production.lock ./
+RUN pip install --no-cache-dir --require-hashes -r requirements-production.lock
+COPY --from=cpp /src/build/recserve_server /usr/local/bin/recserve_server
+COPY recserve_app recserve_app
+COPY migrations migrations
+COPY alembic.ini ./
+USER 10001:10001
+ENTRYPOINT ["python", "-m", "recserve_app.entrypoint"]
+CMD ["api"]
+
+FROM node@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 AS frontend
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY web ./
+RUN npm run build
+
+FROM caddy@sha256:de23def33b17fb5d1290b0f6c2add1d70780e52341896c00a4c8a2a2fe9d355e AS web
+RUN setcap -r /usr/bin/caddy && addgroup -g 10001 recserve && adduser -D -u 10001 -G recserve recserve && chown -R recserve:recserve /data /config
+COPY --from=frontend /web/dist /srv
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+USER 10001:10001
+
+FROM postgres@sha256:639ab7ceb90e13123085b741fb31ef493fba25463002f6da665352e7b534b652 AS database
+RUN apt-get update && apt-get install -y --no-install-recommends pgbackrest && rm -rf /var/lib/apt/lists/* && mkdir -p /var/log/pgbackrest /var/lib/pgbackrest && chown -R postgres:postgres /var/log/pgbackrest /var/lib/pgbackrest
+USER postgres

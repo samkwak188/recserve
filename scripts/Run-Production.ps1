@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('fast', 'integration', 'browser', 'quality', 'qualification', 'release-check')]
+    [ValidateSet('fast', 'integration', 'browser', 'quality', 'operations', 'qualification', 'release-check')]
     [string]$Stage = 'fast',
     [string]$Distribution = 'Ubuntu',
     [switch]$Resume
