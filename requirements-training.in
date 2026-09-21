@@ -1,0 +1,4 @@
+-r requirements-production.in
+scipy==1.15.3
+implicit==0.7.2
+pandas==2.2.3

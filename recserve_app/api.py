@@ -114,6 +114,8 @@ def create_app(settings: Settings | None = None):
                                  model.digest, model.dimension), settings.consent_version)
     app.add_middleware(Bounds)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[urlsplit(settings.origin).hostname])
+    from .contracts import (Preferences, Recommendation, Event, Me, MoviePage, PreferencePage,
+        PreferenceResult, RecommendationResult, Watchlist, EventResult)
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request, exc):
@@ -170,7 +172,7 @@ def create_app(settings: Settings | None = None):
         response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
         response.delete_cookie(CSRF, secure=True, samesite='lax')
 
-    @app.get('/api/v2/me')
+    @app.get('/api/v2/me', response_model=Me)
     def me(actor: Principal = Depends(principal)):
         with db.engine.begin() as tx:
             row = db.lock_user(tx, actor.user_id)
@@ -195,14 +197,12 @@ def create_app(settings: Settings | None = None):
         response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
         response.delete_cookie(CSRF, secure=True, samesite='lax')
 
-    from .contracts import Preferences, Recommendation, Event
-
     def policy():
         if app.state.policy is None:
             raise HTTPException(503, 'Model not configured')
         return app.state.policy
 
-    @app.get('/api/v2/movies')
+    @app.get('/api/v2/movies', response_model=MoviePage)
     def movies(query: str = Query('', max_length=100), cursor: int = Query(0, ge=0, le=100000),
                actor: Principal = Depends(principal)):
         service = policy()
@@ -211,7 +211,7 @@ def create_app(settings: Settings | None = None):
         found = [m for m in service.model.movies if m['available'] and query.casefold() in m['title'].casefold()]
         return {'items': found[cursor:cursor + 20], 'next_cursor': cursor + 20 if cursor + 20 < len(found) else None}
 
-    @app.get('/api/v2/preferences')
+    @app.get('/api/v2/preferences', response_model=PreferencePage)
     def get_preferences(actor: Principal = Depends(principal)):
         service = policy()
         with db.engine.begin() as tx:
@@ -220,19 +220,19 @@ def create_app(settings: Settings | None = None):
                 preferences.c.user_id == actor.user_id)).mappings()]
         return {'items': items, 'preference_revision': user['revision']}
 
-    @app.put('/api/v2/preferences')
+    @app.put('/api/v2/preferences', response_model=PreferenceResult)
     def set_preferences(payload: Preferences, actor: Principal = Depends(principal)):
         return policy().change_preferences(actor.user_id, payload)
 
-    @app.post('/api/v2/recommendations')
+    @app.post('/api/v2/recommendations', response_model=RecommendationResult)
     def recommendations(payload: Recommendation, actor: Principal = Depends(principal)):
         return policy().recommend(actor.user_id, payload)
 
-    @app.post('/api/v2/events')
+    @app.post('/api/v2/events', response_model=EventResult)
     def feedback(payload: Event, actor: Principal = Depends(principal)):
         return policy().event(actor.user_id, payload)
 
-    @app.get('/api/v2/watchlist')
+    @app.get('/api/v2/watchlist', response_model=Watchlist)
     def watchlist(actor: Principal = Depends(principal)):
         service = policy()
         with db.engine.begin() as tx:

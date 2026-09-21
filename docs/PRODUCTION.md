@@ -85,3 +85,26 @@ The PostgreSQL/C++ test suite covers numerical fold-in parity, ANN candidate
 recall on synthetic vectors, malformed frames, model mismatch, account-scoped
 idempotency, concurrent writes, revision races and database-failure closure.
 This does not establish MovieLens quality, full-stack capacity or deployment.
+
+## Chronological quality evaluation
+
+Install `requirements-training.lock` into the local execution environment with
+`pip install --require-hashes -r requirements-training.lock`, then run the
+`quality` stage. Training has global 80/90-percentile timestamp cutoffs; ties
+stay on one side. Every fifth raw user ID is withheld from model fitting.
+Held-out users supply five earlier positive onboarding events; later events
+alone become targets. Training-only encoders, popularity and item factors are
+used by all policies. Unsupported targets and omitted users are counted.
+
+Compare popularity, liked-item centroid and ALS on validation; test only the
+selected candidate against popularity. A positive lower bound of a 1,000-draw
+paired bootstrap NDCG@10 interval is required for personalized promotion.
+The candidate retrieval/filtering path is shared with serving and uses the real
+RSV2 process. ANN recall@128 must be at least 0.98. Results include cohort sizes,
+Recall/NDCG, coverage and popularity concentration. These are observational
+development-data measurements, not causal impact or research-benchmark claims.
+
+The first small-snapshot run selected popularity: ALS's held-out NDCG difference
+interval crossed zero. Raw reports and immutable bundles are under
+`.cache/production/quality`; a compact source-bound summary is published in
+`results/production-quality-small.json`. No old benchmark is overwritten.

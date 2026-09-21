@@ -69,9 +69,12 @@ def reusable(receipt: dict, fingerprint: str, directory: Path) -> bool:
     if receipt.get('fingerprint') != fingerprint or receipt.get('status') != 'passed':
         return False
     steps = receipt.get('steps', [])
-    return bool(steps) and all(
+    logs_ok = bool(steps) and all(
         s.get('exit_code') == 0 and (directory / s['log']).is_file()
         and digest(directory / s['log']) == s.get('log_sha256') for s in steps)
+    artifacts = receipt.get('artifacts', {})
+    return logs_ok and all((ROOT / name).is_file() and digest(ROOT / name) == value
+                           for name, value in artifacts.items())
 
 
 def main() -> int:
@@ -136,6 +139,15 @@ def main() -> int:
         if source_identity(ROOT) != {k: identity[k] for k in ('commit', 'source_sha256')}:
             receipt['reason'] = 'source changed during execution; evidence is not reusable'
             code = 3
+        receipt['artifacts'] = {}
+        for pattern in stage.get('artifacts', []):
+            found = sorted(ROOT.glob(pattern))
+            if not found:
+                receipt['reason'] = 'required artifact missing: ' + pattern
+                code = 3
+            for artifact in found:
+                if artifact.is_file():
+                    receipt['artifacts'][artifact.relative_to(ROOT).as_posix()] = digest(artifact)
         receipt['status'] = 'passed' if code == 0 else 'failed'
     except BaseException:
         receipt['status'] = 'interrupted'

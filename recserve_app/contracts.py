@@ -26,3 +26,63 @@ class Event(StrictModel):
     item_id: Annotated[int, Field(ge=1, le=2147483647)]
     kind: Literal['shown', 'save', 'dismiss', 'watched']
     event_time_ms: Annotated[int, Field(ge=0)]
+
+
+class Movie(StrictModel):
+    id: int
+    title: str
+    year: int | None
+    genres: list[str]
+    available: bool
+
+
+class RecommendedMovie(Movie):
+    source: Literal['popularity', 'centroid', 'als']
+
+
+class RecommendationResult(StrictModel):
+    request_id: str
+    model_version: str
+    policy_version: str
+    preference_revision: int
+    candidate_source: Literal['popularity', 'centroid', 'als']
+    degraded: bool
+    exhausted: bool
+    items: list[RecommendedMovie]
+
+
+class MoviePage(StrictModel):
+    items: list[Movie]
+    next_cursor: int | None
+
+
+class Me(StrictModel):
+    id: str
+    consent_version: str | None
+    required_consent: str
+    preference_revision: int
+
+
+class PreferenceResult(StrictModel):
+    preference_revision: int
+    count: int
+
+
+class PreferencePage(StrictModel):
+    items: list[Change]
+    preference_revision: int
+
+
+class WatchedMovie(Movie):
+    saved: bool
+    watched: bool
+    dismissed: bool
+
+
+class Watchlist(StrictModel):
+    items: list[WatchedMovie]
+
+
+class EventResult(StrictModel):
+    accepted: bool
+    duplicate: bool

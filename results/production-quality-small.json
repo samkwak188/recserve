@@ -1,0 +1,129 @@
+{
+  "training": {
+    "dataset": "small",
+    "dataset_sha256": "696d65a3dfceac7c45750ad32df2c259311949efec81f0f144fdfb91ebc9e436",
+    "train_end": 1458635171,
+    "validation_end": 1498029450,
+    "seed": 13,
+    "factors": 32,
+    "iterations": 15,
+    "held_out_user_rule": "raw user ID modulo 5 equals 0",
+    "train_users": 417,
+    "train_events": 31744,
+    "source": {
+      "commit": "c277281ed7fcf11fbbdaa506df8f829a5e44abaf",
+      "source_sha256": "e8a3c3afb45669ed9f4ca54dc2948bf0526cbdaff8257a9d02bb3ec2bd840a94"
+    }
+  },
+  "validation": {
+    "popularity": {
+      "users": 61,
+      "ndcg10": 0.2348878774132795,
+      "recall10": 0.04935345591739556,
+      "catalog_coverage": 0.008136696501220505,
+      "popular_decile_share": 1.0,
+      "cohorts": {
+        "warm": {
+          "users": 17,
+          "ndcg10": 0.043755338218211856
+        },
+        "held_out_user": {
+          "users": 44,
+          "ndcg10": 0.3087345402841011
+        }
+      }
+    },
+    "centroid": {
+      "users": 61,
+      "ndcg10": 0.21700283950971963,
+      "recall10": 0.049100675929234394,
+      "catalog_coverage": 0.05370219690805533,
+      "popular_decile_share": 0.6557377049180327,
+      "cohorts": {
+        "warm": {
+          "users": 17,
+          "ndcg10": 0.0120224939757933
+        },
+        "held_out_user": {
+          "users": 44,
+          "ndcg10": 0.2961997911932821
+        }
+      }
+    },
+    "als": {
+      "users": 61,
+      "ndcg10": 0.23624334617727463,
+      "recall10": 0.04945277055731579,
+      "catalog_coverage": 0.050854353132628156,
+      "popular_decile_share": 0.7081967213114754,
+      "cohorts": {
+        "warm": {
+          "users": 17,
+          "ndcg10": 0.014587943970889902
+        },
+        "held_out_user": {
+          "users": 44,
+          "ndcg10": 0.3218829333933778
+        }
+      }
+    }
+  },
+  "test": {
+    "popularity": {
+      "users": 72,
+      "ndcg10": 0.1691288975072132,
+      "recall10": 0.049161517224233425,
+      "catalog_coverage": 0.007933279088689993,
+      "popular_decile_share": 1.0,
+      "cohorts": {
+        "held_out_user": {
+          "users": 56,
+          "ndcg10": 0.19608884438931332
+        },
+        "warm": {
+          "users": 16,
+          "ndcg10": 0.07476908341986284
+        }
+      }
+    },
+    "candidate": {
+      "users": 72,
+      "ndcg10": 0.17533192915814488,
+      "recall10": 0.05167633344109202,
+      "catalog_coverage": 0.05655004068348251,
+      "popular_decile_share": 0.7388888888888889,
+      "cohorts": {
+        "held_out_user": {
+          "users": 56,
+          "ndcg10": 0.2115276194522607
+        },
+        "warm": {
+          "users": 16,
+          "ndcg10": 0.04864701312873956
+        }
+      }
+    }
+  },
+  "validation_candidate": "als",
+  "paired_ndcg95": [
+    -0.033289657127126615,
+    0.04234106185814486
+  ],
+  "bootstrap_resamples": 1000,
+  "selected_policy": "popularity",
+  "ann_recall128": 0.9955174180327869,
+  "omitted": {
+    "validation": {
+      "unsupported_target_items": 639,
+      "no_supported_targets": 1
+    },
+    "test": {
+      "unsupported_target_items": 1028
+    }
+  },
+  "release_manifest": ".cache/production/quality/small-1789967973404174030/release/manifest.json",
+  "release_sha256": "7eb32cf8d033b2a12efd39008a88e3485517f5a8efe3f7284e54c0e7ddac2a12",
+  "scope": "development snapshot; no online lift",
+  "raw_report_sha256": "cd3ba39fd07cabda8a0986595c3c4dd0c3e5ae8e8c2a04927e6554f30f409780",
+  "raw_report": ".cache/production/quality/small-1789967973404174030/report.json"
+}

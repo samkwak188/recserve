@@ -78,7 +78,9 @@ def test_login_state_replay_and_invitation(app, client):
     assert client.get('/auth/callback', params={'code': 'x', 'state': state}).status_code == 403
 
 
-def test_bounds_headers_and_rate_limit(app, client):
+def test_bounds_headers_and_rate_limit(app, client, monkeypatch):
+    fixed = now_ms()
+    monkeypatch.setattr('recserve_app.db.now_ms', lambda: fixed)
     signed_in(app, client)
     assert client.put('/api/v2/me/consent', content=b'x' * 32769).status_code == 413
     assert client.get('/healthz', headers={'host': 'attacker.invalid'}).status_code == 400

@@ -4,6 +4,7 @@ from sqlalchemy import select, insert, update, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from .db import now_ms
 from .schema_v1 import users, preferences, item_states, requests, events, mutations
+from .selection import select_items
 
 
 class Policy:
@@ -62,40 +63,12 @@ class Policy:
                 blocked = set(prefs) | set(tx.execute(select(item_states.c.item_id).where(item_states.c.user_id == uid,
                     item_states.c.saved | item_states.c.watched | item_states.c.dismissed)).scalars())
                 revision = user['revision']
-            selected, seen = [], set()
             vector = self.model.vector(uid, revision, prefs)
-            degraded = False
-            source = 'popularity' if vector is None else self.model.policy
-
-            def add(item_id, origin):
-                row = self.model.rows.get(item_id)
-                if row is None:
-                    raise ValueError('Unknown model item')
-                if item_id not in blocked and item_id not in seen and self.model.movies[row]['available']:
-                    selected.append(dict(self.model.movies[row], source=origin))
-                    seen.add(item_id)
-
-            if vector is not None:
-                try:
-                    for count in (128, 256, 512):
-                        for row, score in self.retrieval.query(vector, count, deadline):
-                            if row >= len(self.model.movies):
-                                raise ValueError('Invalid catalog row')
-                            add(self.model.movies[row]['id'], source)
-                        if len(selected) >= payload.k:
-                            break
-                except (OSError, EOFError, ValueError):
-                    selected.clear()
-                    seen.clear()
-                    degraded, source = True, 'popularity'
-            for item in self.model.popularity:
-                if len(selected) >= payload.k:
-                    break
-                add(item, 'popularity')
+            selection = select_items(self.model, self.retrieval, vector, blocked, payload.k,
+                                     self.model.policy, deadline)
             response = dict(request_id=payload.request_id, model_version=self.model.digest,
                 policy_version='explicit-v2-' + self.model.policy, preference_revision=revision,
-                candidate_source=source, degraded=degraded, exhausted=len(selected) < payload.k,
-                items=selected[:payload.k])
+                **selection)
             with self.db.engine.begin() as tx:
                 current = self.account(tx, uid)
                 old = tx.execute(select(requests).where(requests.c.user_id == uid,

@@ -11,7 +11,11 @@
     {"name": "postgres-api", "argv": ["{python}", "scripts/check_production.py"], "timeout_s": 600}
   ]},
   "browser": {"commands": [{"name": "browser", "argv": ["{python}", "scripts/check_browser.py"], "timeout_s": 600}]},
-  "quality": {"commands": [{"name": "quality", "argv": ["{python}", "scripts/quality_production.py"], "timeout_s": 1800}]},
+  "quality": {
+    "inputs": ["data/movielens/ml-small.zip", "build-production/recserve_server", "build-production/recserve_fixture"],
+    "artifacts": [".cache/production/quality/small-*/report.json", ".cache/production/quality/small-*/release/*"],
+    "commands": [{"name": "quality", "argv": ["{python}", "scripts/quality_production.py"], "timeout_s": 1800}]
+  },
   "qualification": {"commands": [{"name": "qualification", "argv": ["{python}", "scripts/qualify_production.py"], "timeout_s": 7200}]},
   "release-check": {"commands": [{"name": "release-gates", "argv": ["{python}", "scripts/release_production.py"]}]}
 }
