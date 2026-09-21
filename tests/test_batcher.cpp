@@ -1,5 +1,6 @@
 #include "recserve/gpu_batcher.hpp"
 #include <iostream>
+#include <sstream>
 
 using namespace recserve;
 void require(bool condition) { if (!condition) throw std::runtime_error("batcher assertion failed"); }
@@ -22,6 +23,14 @@ class TestScorer : public GpuScorer {
 
 int main() {
   try {
+    DurationHistogram histogram;
+    for (auto value : {0u, 1u, 2u, 3u, 131073u}) histogram.observe(value);
+    std::ostringstream rendered;
+    histogram.write(rendered, "duration");
+    require(rendered.str().find("duration_bucket{le=\"1\"} 2\n") != std::string::npos);
+    require(rendered.str().find("duration_bucket{le=\"4\"} 4\n") != std::string::npos);
+    require(rendered.str().find("duration_bucket{le=\"+Inf\"} 5\n") != std::string::npos);
+    require(rendered.str().find("duration_sum 131079\n") != std::string::npos);
     Engine engine;
     engine.cfg.use_hnsw = false; engine.cfg.kernel = Kernel::Simd;
     engine.init_random(128, 16, 17, 7);

@@ -6,7 +6,7 @@ in `results`. Existing ARM and RTX benchmark results are not overwritten.
 
 ## Ordered acceptance gates
 
-1. **Durable pilot (in progress).** A loopback API owns external identities,
+1. **Durable pilot (implemented and locally verified).** A loopback API owns external identities,
    impressions, feedback, eligibility and final policy. The existing C++ process
    retrieves candidates over RSV1. SQLite transactions couple deduplication,
    feedback projection and generation. This is a single-host reference, not the
@@ -41,3 +41,25 @@ New sharding, Kubernetes, cloud price claims, automatic GPU routing, a learned
 ranker without exposure labels, and expanding the core into an order-entry
 system. Multicore/GEMM quality-matched benchmarking and global temporal model
 evaluation remain separate experiments, not consequences of passing the pilot.
+
+## Evidence / follow-through
+
+- `ecdfed7`: durable pilot, 16 initial pilot tests, seven CPU CTest suites,
+  deterministic and real MovieLens restart demos. `cbeb208` repairs Windows test
+  cleanup and missing container inputs; all 16 hosted jobs passed in run
+  https://github.com/samkwak188/recserve/actions/runs/35555320380.
+- Native Windows Python also runs the pilot tests. Tests now cover bounded HTTP
+  admission and absolute slow-client lifetimes as well as the original state
+  contract. Logs are not substituted for actual exit-code gates.
+- GPU investigation separates host wall, device H2D/compute/D2H, scheduler and
+  connection queues. First-call/cold/warm measurements are in
+  `results/GPU_INVESTIGATION.md`; CPU remains the default.
+- `docs/TRADING_APPLICABILITY.md` maps the engine to queue-fill research and lists
+  precise data/replay/evaluation gates. No financial execution adapter was built.
+- The concise README is the supported workflow. Historical breadth is preserved
+  in `EXPERIMENTS.md`, not deleted or relabeled as deployed functionality.
+
+Next implementation requires choosing between (a) completing the movie pilot's
+identity/consent/UI and actual user validation, and (b) a separate, licensed-data
+offline queue-fill research study. Do not silently substitute the latter for
+the former or infer that a finance assessment authorizes trading.

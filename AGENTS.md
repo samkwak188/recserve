@@ -1,5 +1,18 @@
 # Agent handoff
 
+## Local pilot continuation: 2026-09-20
+
+Read README.md, docs/PILOT.md, docs/OWNERSHIP_PLAN.md and
+docs/TRADING_APPLICABILITY.md. `ecdfed7` implements a local Python policy API over
+the C++ retrieval server with SQLite feedback, generation fencing and eligibility.
+`cbeb208` fixes native Windows backup-test closure and container test inputs; all
+16 hosted jobs passed (35555320380). Run scripts/Check-Pilot.ps1 on Windows.
+Raw RSV1 and Kafka/RCU experiments are not the pilot's feature/eligibility path.
+Historical README moved intact to EXPERIMENTS.md. Financial use is an assessment,
+not implemented order-book reconstruction, broker integration or profitable alpha.
+The current GPU investigation adds stage histograms and first-call diagnostics;
+see results/GPU_INVESTIGATION.md. Keep the CPU default and GPU sanitizer gate.
+
 ## Continuation checkpoint: 2026-09-20
 
 Read `EXECUTION_PLAN.md`, `OPERATIONS.md` and `results/EXECUTION_REPORT.md` first.

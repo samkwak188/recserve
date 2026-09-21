@@ -1,5 +1,6 @@
 #pragma once
 #include "engine.hpp"
+#include "histogram.hpp"
 
 namespace recserve {
 
@@ -38,6 +39,8 @@ class GpuBatcher {
   }
   std::atomic<std::uint64_t> batches{0}, gpu_queries{0}, fallback{0}, expired{0}, shed{0}, max_observed_batch{0};
   std::atomic<bool> gpu_healthy{true};
+  DurationHistogram queue_time, gpu_wall_time, h2d_time, device_compute_time, d2h_time;
+  std::atomic<std::uint64_t> first_batch_wall_us{0}, first_batch_device_us{0};
 
  private:
   struct Job { Request request; std::uint64_t submitted; std::promise<Response> promise; };
@@ -81,9 +84,20 @@ class GpuBatcher {
       }
       k = std::min(k, engine_.cat.n);
       const auto gpu_start = now_us();
+      for (const auto& job : batch) queue_time.observe(gpu_start - job.submitted);
       bool used_gpu = gpu_healthy;
       if (used_gpu) try {
-        scorer_->topk(queries_.data(), static_cast<int>(batch.size()), k, output_.data());
+        GpuTiming timing;
+        scorer_->topk(queries_.data(), static_cast<int>(batch.size()), k, output_.data(), &timing);
+        h2d_time.observe(static_cast<std::uint64_t>(std::ceil(timing.h2d_ms * 1000)));
+        device_compute_time.observe(static_cast<std::uint64_t>(std::ceil(timing.compute_ms * 1000)));
+        d2h_time.observe(static_cast<std::uint64_t>(std::ceil(timing.d2h_ms * 1000)));
+        gpu_wall_time.observe(now_us() - gpu_start);
+        if (batches == 0) {
+          first_batch_wall_us = now_us() - gpu_start;
+          first_batch_device_us = static_cast<std::uint64_t>(std::ceil(
+              (timing.h2d_ms + timing.compute_ms + timing.d2h_ms) * 1000));
+        }
         ++batches; gpu_queries += batch.size();
         max_observed_batch = std::max(max_observed_batch.load(), static_cast<std::uint64_t>(batch.size()));
       } catch (const std::exception&) { gpu_healthy = false; used_gpu = false; }

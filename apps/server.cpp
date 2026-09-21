@@ -13,6 +13,7 @@ void stop_signal(int) { interrupted = 1; }
 struct Counters {
   std::atomic<std::uint64_t> accepted{0}, rejected{0}, active{0}, queued{0}, requests{0}, ok{0},
       timeout{0}, bad{0}, unavailable{0}, io_failure{0}, clean_disconnect{0}, duration_us{0};
+  DurationHistogram connection_queue, request_compute;
 };
 struct Connection { socket_t socket; std::uint64_t accepted_us; };
 }
@@ -92,6 +93,7 @@ int run(int argc, char** argv) {
         connection = queue.front(); queue.pop_front(); --counters.queued;
       }
       ++counters.active;
+      counters.connection_queue.observe(now_us() - connection.accepted_us);
       const auto socket = connection.socket;
       auto frame_deadline = connection.accepted_us + static_cast<std::uint64_t>(io_ms) * 1000;
       while (!stopping) {
@@ -115,6 +117,7 @@ int run(int argc, char** argv) {
         catch (const std::exception&) { response.status = Status::Unavailable; }
         const auto elapsed = now_us() - start;
         counters.duration_us += elapsed;
+        counters.request_compute.observe(elapsed);
         if (response.status == Status::Ok && elapsed > request.timeout_us) {
           response.status = Status::Timeout; response.items.clear();
         }
@@ -162,11 +165,24 @@ int run(int argc, char** argv) {
              << "recserve_clean_disconnects_total " << counters.clean_disconnect << '\n'
              << "recserve_compute_duration_microseconds_sum " << counters.duration_us << '\n'
              << "recserve_rss_bytes " << process_rss_bytes() << '\n';
+        counters.connection_queue.write(body, "recserve_connection_queue_microseconds");
+        counters.request_compute.write(body, "recserve_request_compute_microseconds");
         if (batcher) body << "recserve_gpu_batches_total " << batcher->batches << '\n'
                           << "recserve_gpu_queries_total " << batcher->gpu_queries << '\n'
                           << "recserve_gpu_fallback_total " << batcher->fallback << '\n'
                           << "recserve_gpu_healthy " << batcher->gpu_healthy << '\n'
                           << "recserve_gpu_batch_max " << batcher->max_observed_batch << '\n';
+        if (batcher) {
+          batcher->queue_time.write(body, "recserve_gpu_queue_microseconds");
+          batcher->gpu_wall_time.write(body, "recserve_gpu_wall_microseconds");
+          batcher->h2d_time.write(body, "recserve_gpu_h2d_microseconds");
+          batcher->device_compute_time.write(body, "recserve_gpu_device_compute_microseconds");
+          batcher->d2h_time.write(body, "recserve_gpu_d2h_microseconds");
+          body << "recserve_gpu_expired_total " << batcher->expired << '\n'
+               << "recserve_gpu_shed_total " << batcher->shed << '\n'
+               << "recserve_gpu_first_batch_wall_microseconds " << batcher->first_batch_wall_us << '\n'
+               << "recserve_gpu_first_batch_device_microseconds " << batcher->first_batch_device_us << '\n';
+        }
       } else body << "not found\n";
       std::string output = std::string("HTTP/1.1 ") + (found ? "200 OK" : "404 Not Found") +
           "\r\nContent-Type: text/plain; version=0.0.4\r\nConnection: close\r\nContent-Length: " +

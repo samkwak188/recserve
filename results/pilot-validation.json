@@ -1,0 +1,207 @@
+{
+  "utc": "2026-09-21T02:58:36.565681+00:00",
+  "source_parent": "cbeb20812bd2698de115b8b269f4527d46ecf0c8",
+  "source_sha256": {
+    "recserve_pilot/model.py": "40f289eaefb85ee10f206b624f889455c21288da52625417bef9cc40f8618f41",
+    "recserve_pilot/service.py": "1762bd0319a7af24ea3d98494c8f45a07b914dd55d2d18490f4ebef457e1c2dc",
+    "recserve_pilot/store.py": "87a2081119dc5503665f3c967f9f5f9d4fd1a74b351eb8d87318f4e6a01d2261",
+    "recserve_pilot/transport.py": "5ababb6941662bcaefe8322f9335a26e1f3a28656926272d3518b9c647faf52d",
+    "recserve_pilot/__init__.py": "345567faee87dad3ee751afd2cb36fc8073303c7ac72d5cfae00c944d9700875",
+    "apps/server.cpp": "a4474bf76f01b8f70cef1a2d11f121ccdf672b2acd8e78d1631376848708f2a1",
+    "include/recserve/gpu_batcher.hpp": "00373df0859f7e2145fc0101594d6bd6926652dd648983ff4d6727724b6a0365",
+    "include/recserve/histogram.hpp": "044a3c283fb30024703da213f9943461138190c1b3749b5a7cb796ce95b8c153"
+  },
+  "receipts": {
+    "pilot-windows-python": {
+      "command": [
+        "py",
+        "-3.13",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_pilot.py",
+        "-v"
+      ],
+      "started_utc": "2026-09-21T02:52:03.374876+00:00",
+      "status": "completed",
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\pilot-windows-python.log",
+      "exit_code": 0,
+      "elapsed_s": 1.14
+    },
+    "pilot-python": {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "started_utc": "2026-09-21T02:54:29.636050+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/pilot-python.log",
+      "exit_code": 0,
+      "elapsed_s": 1.32
+    },
+    "pilot-ctest": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:31.003912+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/pilot-ctest.log",
+      "exit_code": 0,
+      "elapsed_s": 4.02
+    },
+    "pilot-demo": {
+      "command": [
+        "python3",
+        "scripts/pilot_demo.py",
+        "--build",
+        "build",
+        "--out",
+        "results/pilot-synthetic.json"
+      ],
+      "started_utc": "2026-09-21T02:54:35.881409+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/pilot-demo.log",
+      "exit_code": 0,
+      "elapsed_s": 0.62
+    },
+    "pilot-movielens": {
+      "command": [
+        "python3",
+        "scripts/pilot_demo.py",
+        "--build",
+        "build",
+        "--manifest",
+        "data/wsl_small_bundle.json",
+        "--out",
+        "results/pilot-movielens.json"
+      ],
+      "started_utc": "2026-09-21T02:54:36.547065+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/pilot-movielens.log",
+      "exit_code": 0,
+      "elapsed_s": 1.27
+    },
+    "ownership-test-build": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:03.279016+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-test-build.log",
+      "exit_code": 0,
+      "elapsed_s": 3.98
+    },
+    "ownership-test-build-gpu": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-gpu",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:07.466070+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-test-build-gpu.log",
+      "exit_code": 0,
+      "elapsed_s": 8.69
+    },
+    "ownership-test-build-check-address": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-check-address",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:16.362376+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-test-build-check-address.log",
+      "exit_code": 0,
+      "elapsed_s": 8.43
+    },
+    "ownership-test-build-check-undefined": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-check-undefined",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:25.012524+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-test-build-check-undefined.log",
+      "exit_code": 0,
+      "elapsed_s": 6.23
+    },
+    "ownership-test-build-check-thread": {
+      "command": [
+        "setarch",
+        "x86_64",
+        "-R",
+        "ctest",
+        "--test-dir",
+        "build-check-thread",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-09-21T02:54:31.458572+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-test-build-check-thread.log",
+      "exit_code": 0,
+      "elapsed_s": 14.95
+    },
+    "ownership-container-build": {
+      "command": [
+        "docker",
+        "build",
+        "-t",
+        "recserve:local",
+        "."
+      ],
+      "started_utc": "2026-09-21T02:55:36.133070+00:00",
+      "status": "completed",
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\ownership-container-build.log",
+      "exit_code": 0,
+      "elapsed_s": 25.31
+    },
+    "ownership-container-runtime": {
+      "command": [
+        "py",
+        "-3.13",
+        "scripts/check_container.py",
+        "--out",
+        "results/pilot-container-validation.json"
+      ],
+      "started_utc": "2026-09-21T02:57:26.140103+00:00",
+      "status": "completed",
+      "log": "C:\\Users\\samis\\Desktop\\1. recserve\\.cache\\logs\\ownership-container-runtime.log",
+      "exit_code": 0,
+      "elapsed_s": 7.87
+    },
+    "ownership-gpu-investigation": {
+      "command": [
+        "python3",
+        "scripts/investigate_gpu.py"
+      ],
+      "started_utc": "2026-09-21T02:50:34.785473+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/ownership-gpu-investigation.log",
+      "exit_code": 0,
+      "elapsed_s": 119.02
+    }
+  },
+  "all_listed_local_commands_succeeded": true,
+  "provenance_note": "Source hashes are report-time snapshots; receipts identify their original commands/times. GPU study records its own measurement-time hashes."
+}

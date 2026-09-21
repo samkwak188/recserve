@@ -1,10 +1,10 @@
 {
-  "utc": "2026-09-21T02:37:52.461123+00:00",
+  "utc": "2026-09-21T02:54:37.761701+00:00",
   "passed": true,
   "fixture": "provided_bundle",
   "model_version": "wsl-movielens-small-v1",
   "manifest_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
-  "binary_sha256": "49e1f419f7993ec469131413f552e17a9016a2ec67d7598743d9251d2beab5a5",
+  "binary_sha256": "f38478b25c2999af095b03d9668c7907ff06a3f11318703af26e42d80b8e58e8",
   "checks": [
     "real_cpp_retrieval_and_training_seen_exclusion",
     "acknowledged_outcome_duplicate_and_conflict",
@@ -58,7 +58,7 @@
     "feature_generation": 2,
     "candidate_source": "cpp_retrieval",
     "degraded": false,
-    "last_feedback_commit_ms": 1789958272050,
+    "last_feedback_commit_ms": 1789959277294,
     "items": [
       {
         "item_id": "2195",
@@ -93,7 +93,7 @@
     "feature_generation": 2,
     "candidate_source": "cpp_retrieval",
     "degraded": false,
-    "last_feedback_commit_ms": 1789958272050,
+    "last_feedback_commit_ms": 1789959277294,
     "items": [
       {
         "item_id": "2195",
@@ -128,7 +128,7 @@
     "feature_generation": 2,
     "candidate_source": "popularity_upstream_unavailable",
     "degraded": true,
-    "last_feedback_commit_ms": 1789958272050,
+    "last_feedback_commit_ms": 1789959277294,
     "items": [
       {
         "item_id": "318",

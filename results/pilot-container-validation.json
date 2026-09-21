@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "image_id": "sha256:8027ce86c6bd4ca5fa1e59078e017add2a25a8e122ee764f4d33acd44a47cbc6",
+  "user": "10001:10001",
+  "readonly_root": true,
+  "loopback_only": true,
+  "pids_limit": 128,
+  "health": "healthy",
+  "real_model_request": "ok"
+}

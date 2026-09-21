@@ -4,8 +4,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import sqlite3
+import socket
 import threading
-import time
 
 from .model import Model, rank
 from .store import Changed, Conflict, Store, identifier
@@ -73,6 +73,7 @@ class Pilot:
 class Server(ThreadingHTTPServer):
     daemon_threads = False
     request_queue_size = 16
+    request_lifetime_s = 5
 
     def __init__(self, address, pilot):
         if address[0] != '127.0.0.1':
@@ -97,13 +98,30 @@ class Server(ThreadingHTTPServer):
             raise
 
     def process_request_thread(self, request, client_address):
+        # Per-read socket timeouts alone allow an indefinitely slow byte stream.
+        # Bound the entire connection lifetime as well, including header reads.
+        def expire():
+            try:
+                request.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        timer = threading.Timer(self.request_lifetime_s, expire)
+        timer.daemon = True
+        timer.start()
         try:
             super().process_request_thread(request, client_address)
         finally:
+            timer.cancel()
             self.slots.release()
 
 
 class Handler(BaseHTTPRequestHandler):
+    def handle(self):
+        try:
+            super().handle()
+        except (ConnectionError, TimeoutError):
+            self.close_connection = True
+
     def log_message(self, *_args):
         pass  # Do not put user identities or event payloads in access logs.
 

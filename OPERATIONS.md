@@ -1,5 +1,14 @@
 # Local execution and production boundaries
 
+## Local feedback pilot
+
+The supported feedback workflow is documented in `docs/PILOT.md`.
+PowerShell: `.\scripts\Check-Pilot.ps1`; WSL: `bash scripts/check_pilot.sh`.
+It adds a separate loopback policy API with SQLite feedback recovery and
+eligibility. It does not change the raw C++ TCP contract described below or
+integrate the Kafka/RCU experiments. No public authentication is provided.
+GPU stage diagnostics and their limits are in `results/GPU_INVESTIGATION.md`.
+
 ## Verified environment
 
 Windows host: Ryzen 5 5600X, 12 logical CPUs, RTX 3060 12 GiB, driver 591.86.
@@ -114,8 +123,10 @@ chain. GPU runtime images and vulnerability/signature gates remain release work.
 - Failed bundle verification: refuse startup. Restore the previous complete,
   verified bundle in a separate directory and restart against it. Do not edit
   individual live catalog/index/query files in place.
-- Stale features: no production feature bridge exists yet; there is currently no
-  freshness recovery guarantee. Complete R3 before connecting real event traffic.
+- Stale features: raw TCP has no production feature bridge. The local pilot reads
+  its transactional projection directly and fences stale response publication;
+  database unavailability returns an error. This is not R3's Kafka recovery or
+  an asynchronous freshness guarantee. Complete those gates before live ingestion.
 - Shutdown: SIGTERM/SIGINT stops admission, closes queued connections and lets
   active work finish/expire. Use a supervisor/container grace period and verify
   this under the largest permitted catalog; a stuck hardware operation is not

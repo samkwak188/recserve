@@ -1,5 +1,16 @@
 # RecServe execution plan
 
+## Latest local pilot checkpoint
+
+`ecdfed7` closes a local C++ retrieval -> eligibility/ranking -> transactional
+feedback -> changed response loop. `cbeb208` fixes Windows backup-test handle
+lifetime and container test inputs; all 16 hosted jobs passed in run 35555320380.
+See `docs/PILOT.md` and `docs/OWNERSHIP_PLAN.md` for the exact current contract.
+The Python policy layer uses SQLite; it does not wire Kafka to the C++ RCU table.
+Raw RSV1 still has no eligibility filters. Global temporal model evaluation,
+learned ranking, whole-pilot soak, authenticated real-user rollout and distributed
+recovery remain open. Historical roadmap text below describes that broader scope.
+
 Baseline: 86bbbc22462c70ff5fa2307dadb161183bf9a324, 2026-09-20.
 Target: a reproducible recommendation service with measured quality, durable
 features, deadline-aware CPU/GPU retrieval, and an operational deployment.

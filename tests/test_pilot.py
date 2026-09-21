@@ -1,10 +1,12 @@
 """Policy, transactional races and actual process-crash recovery; no network data."""
 import concurrent.futures
 import json
-import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import socket
+import threading
+import time
 import sys
 import tempfile
 import unittest
@@ -15,7 +17,7 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from recserve_pilot.model import eligible, rank
-from recserve_pilot.service import Pilot
+from recserve_pilot.service import Pilot, Server
 from recserve_pilot.store import Changed, Conflict, Store, now_ms
 
 
@@ -217,6 +219,61 @@ class PilotTests(unittest.TestCase):
         self.assertEqual(restored.snapshot('u'), self.store.snapshot('u'))
         with self.assertRaises(ValueError):
             Store(self.path, 'different-model')
+
+    def test_http_slow_stream_has_absolute_lifetime(self):
+        server = Server(('127.0.0.1', 0), self.pilot)
+        server.request_lifetime_s = 0.2
+        thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .01})
+        thread.start()
+        try:
+            with socket.create_connection(server.server_address, timeout=2) as client:
+                start = time.monotonic()
+                client.sendall(b'POST /v1/events HTTP/1.1\r\nX-Slow: ')
+                for _ in range(20):
+                    try:
+                        client.sendall(b'a')
+                    except OSError:
+                        break
+                    time.sleep(.03)
+                try:
+                    self.assertEqual(client.recv(1), b'')
+                except (ConnectionAbortedError, ConnectionResetError):
+                    pass  # Windows can abort rather than deliver EOF on shutdown.
+                self.assertLess(time.monotonic()-start, 1)
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+            server.server_close()
+
+    def test_http_admission_is_bounded_and_recovers(self):
+        server = Server(('127.0.0.1', 0), self.pilot)
+        thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .01})
+        thread.start()
+        clients = []
+        try:
+            for _ in range(8):
+                client = socket.create_connection(server.server_address, timeout=2)
+                client.sendall(b'G')
+                clients.append(client)
+            until = time.monotonic()+2
+            while server.slots._value != 0 and time.monotonic() < until:
+                time.sleep(.01)
+            self.assertEqual(server.slots._value, 0)
+            with socket.create_connection(server.server_address, timeout=2) as excess:
+                self.assertEqual(excess.recv(1), b'')
+            for client in clients:
+                client.close()
+            clients.clear()
+            until = time.monotonic()+2
+            while server.slots._value != 8 and time.monotonic() < until:
+                time.sleep(.01)
+            self.assertEqual(server.slots._value, 8)
+        finally:
+            for client in clients:
+                client.close()
+            server.shutdown()
+            thread.join(timeout=3)
+            server.server_close()
 
 
 if __name__ == '__main__':

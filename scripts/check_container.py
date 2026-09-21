@@ -12,6 +12,7 @@ import time
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--docker', default='docker')
+    parser.add_argument('--out', type=pathlib.Path, default=pathlib.Path('results/container-validation.json'))
     args = parser.parse_args()
     compose = [args.docker, 'compose', '-p', 'recserve-validation', '-f', 'compose.serve.yml']
     def run(command):
@@ -48,7 +49,8 @@ def main():
         assert state['HostConfig']['PortBindings']['9400/tcp'][0]['HostIp'] == '127.0.0.1'
         result = dict(passed=True, image_id=state['Image'], user=state['Config']['User'],
                       readonly_root=True, loopback_only=True, pids_limit=128, health='healthy', real_model_request='ok')
-        pathlib.Path('results/container-validation.json').write_text(json.dumps(result, indent=2)+'\n')
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=2)+'\n')
         print(json.dumps(result))
     finally:
         print(run([*compose, 'down', '--timeout', '15']))

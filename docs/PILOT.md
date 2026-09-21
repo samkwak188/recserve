@@ -105,7 +105,8 @@ must remain immutable while running; hashes are not signatures.
 - Authentication, per-user authorization, consent, retention/deletion, TLS and
   an actual opt-in workflow. Local IDs are not access controls.
 - Supported HTTP deployment stack. This standard-library local server bounds
-  active handlers at eight with a 16-connection backlog; it is not internet-ready.
+  active handlers at eight with a 16-connection backlog and a five-second absolute
+  connection lifetime. Overload/slow-stream recovery is tested; it is not internet-ready.
 - Whole-pilot load/resource tests, database maintenance, disk-full/machine-loss
   drills, storage retention limits, and model migration.
 - Exposure-quality audit, global train/validation/test isolation, cohort results/

@@ -106,8 +106,11 @@ def main():
             assert code == 200 and metrics['recserve_connections_rejected_total'] > 0
             assert metrics['recserve_clean_disconnects_total'] >= 3
             assert metrics['recserve_connections_active'] <= 2 and metrics['recserve_connections_queued'] <= 2
+            assert metrics['recserve_request_compute_microseconds_count'] >= 7
+            assert metrics['recserve_request_compute_microseconds_bucket{le="+Inf"}'] == metrics['recserve_request_compute_microseconds_count']
             if args.backend == 'cuda':
                 assert metrics['recserve_gpu_batch_max'] >= 2 and metrics['recserve_gpu_fallback_total'] == 0
+                assert metrics['recserve_gpu_h2d_microseconds_count'] == metrics['recserve_gpu_batches_total']
             for s in clients:
                 s.close()
             clients.clear()

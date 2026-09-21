@@ -41,9 +41,13 @@ acceptance run. See [pilot setup and API](docs/PILOT.md).
 
 ## Evidence and limitations
 
+- [Latest implementation and verification report](results/PILOT_EXECUTION_REPORT.md).
 - [GPU/CPU and service measurements](results/EXECUTION_REPORT.md): hardware,
   batch size, quality and timing boundaries accompany the numbers.
 - [Pilot contract and recovery checks](docs/PILOT.md).
+- [Low-rate GPU investigation](results/GPU_INVESTIGATION.md).
+- [Trading, queue modeling and arbitrage applicability](docs/TRADING_APPLICABILITY.md):
+  a research direction, not a trading implementation or profit claim.
 - [Current execution gates](docs/OWNERSHIP_PLAN.md) and broader
   [production roadmap](EXECUTION_PLAN.md).
 - [Operations](OPERATIONS.md), [historical experiments](EXPERIMENTS.md), and
