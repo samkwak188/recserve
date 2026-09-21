@@ -3,13 +3,16 @@ from fastapi import HTTPException
 from sqlalchemy import select, insert, update, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from .db import now_ms
-from .schema_v1 import users, preferences, item_states, requests, events, mutations
+from .schema_v1 import users, preferences, item_states, requests, events, mutations, models
 from .selection import select_items
 
 
 class Policy:
     def __init__(self, db, model, retrieval, consent_version):
         self.db, self.model, self.retrieval, self.consent_version = db, model, retrieval, consent_version
+        with db.engine.begin() as tx:
+            tx.execute(pg_insert(models).values(digest=model.digest, metadata=model.manifest,
+                       created_ms=now_ms()).on_conflict_do_nothing(index_elements=['digest']))
 
     def account(self, tx, uid):
         user = self.db.lock_user(tx, uid)

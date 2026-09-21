@@ -11,3 +11,5 @@ pytest>=9,<10
 pytest-asyncio>=1,<2
 respx>=0.22,<1
 cryptography>=46,<49
+boto3>=1.40,<2
+prometheus-client>=0.22,<1

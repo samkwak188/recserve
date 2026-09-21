@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import ipaddress
 import json
 import os
+import platform
 from pathlib import Path
 import socket
 import ssl
@@ -55,7 +56,10 @@ def main():
         while len(ports) < 3:
             ports.add(free_port())
         api_port, retrieval_port, metrics_port = sorted(ports)
-        origin = f'https://localhost:{api_port}'
+        if 'microsoft' in platform.release().lower():
+            script = subprocess.check_output(['wslpath', '-w', str(ROOT / 'scripts/Get-TestPort.ps1')], text=True).strip()
+            api_port = int(subprocess.check_output(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], text=True).strip())
+        origin = f'https://127.0.0.1:{api_port}'
         database = Database(os.environ['DATABASE_URL'])
         accounts = []
         with database.engine.begin() as tx:
@@ -70,7 +74,7 @@ def main():
         env = dict(os.environ, APP_ORIGIN=origin, MODEL_BUNDLE=str(manifest), GOOGLE_CLIENT_ID='browser-fixture',
             GOOGLE_CLIENT_SECRET='browser-fixture', RETRIEVAL_PORT=str(retrieval_port),
             PLAYWRIGHT_BASE_URL=origin, BROWSER_FIXTURE=str(fixture), OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1',
-            BROWSER_OUTPUT_DIR=str(base), PYTHONPATH=str(ROOT))
+            BROWSER_OUTPUT_DIR=str(base), BROWSER_LEDGER_DIRECTORY=str(directory / 'ledger'), PYTHONPATH=str(ROOT))
         processes = []
         with (base / 'services.log').open('w') as log:
             try:

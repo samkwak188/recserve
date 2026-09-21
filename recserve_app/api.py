@@ -16,6 +16,8 @@ from .config import Settings
 from .db import Database, Principal, hashed, now_ms
 from .oidc import GoogleOIDC
 from .schema_v1 import users, sessions, preferences, item_states
+from .privacy import S3DeletionLedger, reconcile
+from .telemetry import Metrics, Telemetry
 
 SESSION = '__Host-recserve'
 CSRF = '__Host-recserve-csrf'
@@ -95,19 +97,44 @@ def principal(request: Request) -> Principal:
     return result
 
 
-def create_app(settings: Settings | None = None):
+def create_app(settings: Settings | None = None, ledger=None):
     settings = settings or Settings.from_env()
     db = Database(settings.database_url)
+    ledger = ledger if ledger is not None else S3DeletionLedger.from_env()
 
     @asynccontextmanager
     async def lifespan(app):
         anyio.to_thread.current_default_thread_limiter().total_tokens = 16
-        yield
-        db.engine.dispose()
+        if ledger is None:
+            raise RuntimeError('An independent deletion ledger is required before serving accounts')
+        await anyio.to_thread.run_sync(reconcile, db, ledger)
+        app.state.privacy_ready = True
+        stop = asyncio.Event()
+
+        async def maintenance():
+            while not stop.is_set():
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=60)
+                except asyncio.TimeoutError:
+                    try:
+                        await anyio.to_thread.run_sync(reconcile, db, ledger)
+                        app.state.privacy_ready = True
+                    except Exception:
+                        app.state.privacy_ready = False
+
+        task = asyncio.create_task(maintenance())
+        try:
+            yield
+        finally:
+            stop.set()
+            await task
+            db.engine.dispose()
 
     app = FastAPI(title='RecServe movie pilot', version='2.0.0', lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings, app.state.db, app.state.oidc = settings, db, GoogleOIDC(settings)
+    app.state.ledger, app.state.privacy_ready = ledger, False
+    app.state.metrics = Metrics()
     app.state.policy = None
     if settings.bundle:
         from .model import Model
@@ -117,6 +144,7 @@ def create_app(settings: Settings | None = None):
         app.state.policy = Policy(db, model, Retrieval(settings.upstream_host, settings.upstream_port,
                                  model.digest, model.dimension), settings.consent_version)
     app.add_middleware(Bounds)
+    app.add_middleware(Telemetry, metrics=app.state.metrics)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[urlsplit(settings.origin).hostname])
     from .contracts import (Preferences, Recommendation, Event, Me, MoviePage, PreferencePage,
         PreferenceResult, RecommendationResult, Watchlist, EventResult)
@@ -130,8 +158,15 @@ def create_app(settings: Settings | None = None):
     def health():
         return {'status': 'alive'}
 
+    @app.get('/internal/metrics', include_in_schema=False)
+    def metrics():
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        return Response(generate_latest(app.state.metrics.registry), media_type=CONTENT_TYPE_LATEST)
+
     @app.get('/readyz')
     def ready():
+        if not app.state.privacy_ready:
+            raise HTTPException(503, 'Privacy ledger replay unavailable')
         with db.engine.connect() as connection:
             revision = connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
         if revision != '0001':
@@ -197,7 +232,14 @@ def create_app(settings: Settings | None = None):
 
     @app.delete('/api/v2/me', status_code=204)
     def remove(response: Response, actor: Principal = Depends(principal)):
-        db.delete_account(actor.user_id)
+        if app.state.ledger is None:
+            raise HTTPException(503, 'Deletion ledger unavailable')
+        try:
+            db.delete_account(actor.user_id, app.state.ledger.record)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(503, 'Deletion could not be confirmed; retry or contact the operator') from None
         response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
         response.delete_cookie(CSRF, secure=True, samesite='lax')
 
@@ -230,7 +272,9 @@ def create_app(settings: Settings | None = None):
 
     @app.post('/api/v2/recommendations', response_model=RecommendationResult)
     def recommendations(payload: Recommendation, actor: Principal = Depends(principal)):
-        return policy().recommend(actor.user_id, payload)
+        result = policy().recommend(actor.user_id, payload)
+        app.state.metrics.recommendations.labels(result['candidate_source'], str(result['degraded']).lower()).inc()
+        return result
 
     @app.post('/api/v2/events', response_model=EventResult)
     def feedback(payload: Event, actor: Principal = Depends(principal)):

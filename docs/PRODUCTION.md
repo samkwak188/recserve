@@ -49,11 +49,16 @@ there is no development login endpoint or anonymous identity fallback. Tests
 use ephemeral signed tokens and controlled provider responses, not real Google
 credentials. Production cookies require HTTPS even in local browser workflows.
 
-Account deletion immediately removes primary records and sessions and commits a
-deletion outbox entry. Off-host delivery and restore fencing are not yet wired;
-therefore this checkpoint is not cleared for real personal data. Export is a
-synchronous authenticated snapshot. Raw event retention requires scheduling the
-maintenance task before launch. Live Google configuration remains an owner gate.
+Account deletion first writes an encrypted tombstone to an independent HTTPS
+S3-compatible ledger, then removes primary records and sessions transactionally.
+An unavailable ledger prevents a successful deletion acknowledgement. Startup
+replays the ledger before readiness; periodic reconciliation and retention run
+in one bounded maintenance task. A restore must retain access to that independent
+ledger and its separately recoverable key. Local tests cover acknowledgement,
+ledger failure and deletion replay after simulated database restoration. They do
+not validate a real bucket's permissions, lifecycle or off-host durability.
+Export is a synchronous authenticated snapshot. Live Google configuration,
+off-host credentials and retention configuration remain owner launch gates.
 
 ## Item-only personalization checkpoint
 

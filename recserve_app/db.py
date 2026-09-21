@@ -100,13 +100,24 @@ class Database:
             raise HTTPException(401, 'Authentication required')
         return row
 
-    def delete_account(self, uid):
+    def delete_account(self, uid, record_deletion):
         with self.engine.begin() as tx:
             self.lock_user(tx, uid)
             email = tx.execute(select(identities.c.email).where(identities.c.user_id == uid)).scalar_one()
+            # Acknowledgement requires the independent ledger before the DB commit.
+            # If the DB commit subsequently fails, replay still enforces deletion.
+            record_deletion(uid)
             tx.execute(delete(invitations).where(invitations.c.email == email))
-            tx.execute(insert(outbox).values(id=str(uuid.uuid4()), user_id=uid, kind='delete', created_ms=now_ms()))
+            tx.execute(insert(outbox).values(id=str(uuid.uuid4()), user_id=uid, kind='delete',
+                                            created_ms=now_ms(), delivered_ms=now_ms()))
             tx.execute(delete(users).where(users.c.id == uid))
+
+    def replay_deletions(self, user_ids):
+        with self.engine.begin() as tx:
+            for uid in user_ids:
+                emails = select(identities.c.email).where(identities.c.user_id == uid)
+                tx.execute(delete(invitations).where(invitations.c.email.in_(emails)))
+                tx.execute(delete(users).where(users.c.id == uid))
 
     def export(self, uid):
         result = {}
@@ -125,3 +136,4 @@ class Database:
             for table in (events, requests, mutations):
                 tx.execute(delete(table).where(table.c.created_ms < stamp - 90 * 86400000))
             tx.execute(delete(rate_limits).where(rate_limits.c.window < stamp // 60000 - 2))
+            tx.execute(delete(outbox).where(outbox.c.delivered_ms.is_not(None), outbox.c.created_ms < stamp - 8 * 86400000))

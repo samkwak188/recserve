@@ -14,6 +14,7 @@ from recserve_app.model import Model
 from recserve_app.policy import Policy
 from recserve_app.retrieval import Retrieval
 from scripts.model_v2 import write_bundle
+from support import MemoryLedger
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -73,7 +74,7 @@ def service(app, live_model):
 @pytest.fixture
 def app():
     settings = Settings(os.environ['DATABASE_URL'], 'https://pilot.test', 'test-client', 'test-secret')
-    app = create_app(settings)
+    app = create_app(settings, ledger=MemoryLedger())
     with app.state.db.engine.begin() as tx:
         for table in reversed(metadata.sorted_tables):
             tx.execute(table.delete())

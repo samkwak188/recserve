@@ -16,7 +16,7 @@ def main():
     name = 'recserve-test-' + uuid.uuid4().hex[:12]
     password = secrets.token_hex(24)
     env = dict(os.environ, POSTGRES_PASSWORD=password)
-    image = 'postgres:17.6-bookworm'
+    image = 'postgres@sha256:639ab7ceb90e13123085b741fb31ef493fba25463002f6da665352e7b534b652'
     subprocess.run(['docker', 'pull', image], check=True)
     try:
         subprocess.run(['docker', 'run', '-d', '--name', name, '--label', 'recserve.test=true',
