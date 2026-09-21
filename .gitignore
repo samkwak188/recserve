@@ -15,6 +15,9 @@ data/kuairec/
 .cache/
 compile_commands.json
 __pycache__/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.pyc
 .DS_Store
 data/movielens/

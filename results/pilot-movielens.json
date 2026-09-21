@@ -1,0 +1,161 @@
+{
+  "utc": "2026-09-21T02:37:52.461123+00:00",
+  "passed": true,
+  "fixture": "provided_bundle",
+  "model_version": "wsl-movielens-small-v1",
+  "manifest_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+  "binary_sha256": "49e1f419f7993ec469131413f552e17a9016a2ec67d7598743d9251d2beab5a5",
+  "checks": [
+    "real_cpp_retrieval_and_training_seen_exclusion",
+    "acknowledged_outcome_duplicate_and_conflict",
+    "feedback_changes_served_response",
+    "full_stack_restart_and_replay",
+    "idempotent_response_identity_validation_and_browser_origin_rejection",
+    "cold_start_and_explicit_upstream_failure_fallback"
+  ],
+  "before": {
+    "schema_version": 1,
+    "request_id": "before",
+    "user_id": "1",
+    "model_version": "wsl-movielens-small-v1",
+    "model_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 0,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": null,
+    "items": [
+      {
+        "item_id": "3177",
+        "score": 0.545116126537323
+      },
+      {
+        "item_id": "2195",
+        "score": 0.5177282094955444
+      },
+      {
+        "item_id": "2504",
+        "score": 0.5119993686676025
+      },
+      {
+        "item_id": "1641",
+        "score": 0.5102805495262146
+      },
+      {
+        "item_id": "1375",
+        "score": 0.48927080631256104
+      }
+    ],
+    "exhausted": false
+  },
+  "after": {
+    "schema_version": 1,
+    "request_id": "after",
+    "user_id": "1",
+    "model_version": "wsl-movielens-small-v1",
+    "model_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": 1789958272050,
+    "items": [
+      {
+        "item_id": "2195",
+        "score": 0.5177282094955444
+      },
+      {
+        "item_id": "2504",
+        "score": 0.5119993686676025
+      },
+      {
+        "item_id": "1641",
+        "score": 0.5102805495262146
+      },
+      {
+        "item_id": "1375",
+        "score": 0.48927080631256104
+      },
+      {
+        "item_id": "2335",
+        "score": 0.48337796330451965
+      }
+    ],
+    "exhausted": false
+  },
+  "restored": {
+    "schema_version": 1,
+    "request_id": "restored",
+    "user_id": "1",
+    "model_version": "wsl-movielens-small-v1",
+    "model_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": 1789958272050,
+    "items": [
+      {
+        "item_id": "2195",
+        "score": 0.5177282094955444
+      },
+      {
+        "item_id": "2504",
+        "score": 0.5119993686676025
+      },
+      {
+        "item_id": "1641",
+        "score": 0.5102805495262146
+      },
+      {
+        "item_id": "1375",
+        "score": 0.48927080631256104
+      },
+      {
+        "item_id": "2335",
+        "score": 0.48337796330451965
+      }
+    ],
+    "exhausted": false
+  },
+  "fallback": {
+    "schema_version": 1,
+    "request_id": "fallback",
+    "user_id": "1",
+    "model_version": "wsl-movielens-small-v1",
+    "model_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "popularity_upstream_unavailable",
+    "degraded": true,
+    "last_feedback_commit_ms": 1789958272050,
+    "items": [
+      {
+        "item_id": "318",
+        "score": -1.0
+      },
+      {
+        "item_id": "296",
+        "score": -1.0003175611305177
+      },
+      {
+        "item_id": "593",
+        "score": -1.0006351222610352
+      },
+      {
+        "item_id": "2959",
+        "score": -1.000952683391553
+      },
+      {
+        "item_id": "527",
+        "score": -1.0014290250873292
+      }
+    ],
+    "exhausted": false
+  },
+  "limitations": [
+    "local single-host reference",
+    "not latency or user-impact evidence",
+    "issued responses require explicit shown acknowledgements"
+  ]
+}

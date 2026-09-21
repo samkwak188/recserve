@@ -1,0 +1,161 @@
+{
+  "utc": "2026-09-21T02:37:51.407874+00:00",
+  "passed": true,
+  "fixture": "synthetic_correctness",
+  "model_version": "deterministic-demo",
+  "manifest_sha256": "4afef427b613d981485a95ab99363097db8499d2b95eee1663b432de3de03780",
+  "binary_sha256": "49e1f419f7993ec469131413f552e17a9016a2ec67d7598743d9251d2beab5a5",
+  "checks": [
+    "real_cpp_retrieval_and_training_seen_exclusion",
+    "acknowledged_outcome_duplicate_and_conflict",
+    "feedback_changes_served_response",
+    "full_stack_restart_and_replay",
+    "idempotent_response_identity_validation_and_browser_origin_rejection",
+    "cold_start_and_explicit_upstream_failure_fallback"
+  ],
+  "before": {
+    "schema_version": 1,
+    "request_id": "before",
+    "user_id": "demo-user",
+    "model_version": "deterministic-demo",
+    "model_sha256": "4afef427b613d981485a95ab99363097db8499d2b95eee1663b432de3de03780",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 0,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": null,
+    "items": [
+      {
+        "item_id": "movie-1",
+        "score": 0.9375
+      },
+      {
+        "item_id": "movie-2",
+        "score": 0.875
+      },
+      {
+        "item_id": "movie-3",
+        "score": 0.8125
+      },
+      {
+        "item_id": "movie-4",
+        "score": 0.75
+      },
+      {
+        "item_id": "movie-5",
+        "score": 0.6875
+      }
+    ],
+    "exhausted": false
+  },
+  "after": {
+    "schema_version": 1,
+    "request_id": "after",
+    "user_id": "demo-user",
+    "model_version": "deterministic-demo",
+    "model_sha256": "4afef427b613d981485a95ab99363097db8499d2b95eee1663b432de3de03780",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": 1789958271125,
+    "items": [
+      {
+        "item_id": "movie-2",
+        "score": 0.875
+      },
+      {
+        "item_id": "movie-3",
+        "score": 0.8125
+      },
+      {
+        "item_id": "movie-4",
+        "score": 0.75
+      },
+      {
+        "item_id": "movie-5",
+        "score": 0.6875
+      },
+      {
+        "item_id": "movie-6",
+        "score": 0.625
+      }
+    ],
+    "exhausted": false
+  },
+  "restored": {
+    "schema_version": 1,
+    "request_id": "restored",
+    "user_id": "demo-user",
+    "model_version": "deterministic-demo",
+    "model_sha256": "4afef427b613d981485a95ab99363097db8499d2b95eee1663b432de3de03780",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "cpp_retrieval",
+    "degraded": false,
+    "last_feedback_commit_ms": 1789958271125,
+    "items": [
+      {
+        "item_id": "movie-2",
+        "score": 0.875
+      },
+      {
+        "item_id": "movie-3",
+        "score": 0.8125
+      },
+      {
+        "item_id": "movie-4",
+        "score": 0.75
+      },
+      {
+        "item_id": "movie-5",
+        "score": 0.6875
+      },
+      {
+        "item_id": "movie-6",
+        "score": 0.625
+      }
+    ],
+    "exhausted": false
+  },
+  "fallback": {
+    "schema_version": 1,
+    "request_id": "fallback",
+    "user_id": "demo-user",
+    "model_version": "deterministic-demo",
+    "model_sha256": "4afef427b613d981485a95ab99363097db8499d2b95eee1663b432de3de03780",
+    "policy_version": "eligible-save-rate-v1",
+    "feature_generation": 2,
+    "candidate_source": "popularity_upstream_unavailable",
+    "degraded": true,
+    "last_feedback_commit_ms": 1789958271125,
+    "items": [
+      {
+        "item_id": "movie-2",
+        "score": -1.1666666666666667
+      },
+      {
+        "item_id": "movie-3",
+        "score": -1.25
+      },
+      {
+        "item_id": "movie-4",
+        "score": -1.3333333333333333
+      },
+      {
+        "item_id": "movie-5",
+        "score": -1.4166666666666667
+      },
+      {
+        "item_id": "movie-6",
+        "score": -1.5
+      }
+    ],
+    "exhausted": false
+  },
+  "limitations": [
+    "local single-host reference",
+    "not latency or user-impact evidence",
+    "issued responses require explicit shown acknowledgements"
+  ]
+}
