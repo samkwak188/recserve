@@ -83,7 +83,7 @@ def test_bounds_headers_and_rate_limit(app, client):
     assert client.put('/api/v2/me/consent', content=b'x' * 32769).status_code == 413
     assert client.get('/healthz', headers={'host': 'attacker.invalid'}).status_code == 400
     assert client.get('/api/v2/me').headers['cache-control'] == 'no-store'
-    assert client.get('/readyz').status_code == 200
+    assert client.get('/readyz').status_code == 503  # no model configured in account-only fixture
     for _ in range(10):
         assert client.get('/auth/login').status_code == 303
     assert client.get('/auth/login').status_code == 429

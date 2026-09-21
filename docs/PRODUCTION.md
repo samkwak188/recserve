@@ -54,3 +54,34 @@ deletion outbox entry. Off-host delivery and restore fencing are not yet wired;
 therefore this checkpoint is not cleared for real personal data. Export is a
 synchronous authenticated snapshot. Raw event retention requires scheduling the
 maintenance task before launch. Live Google configuration remains an owner gate.
+
+## Item-only personalization checkpoint
+
+The v2 API accepts explicit likes/dislikes, maintains per-account revisions,
+retrieves with an independently verified fold-in vector, filters all explicit
+preferences and saved/watched/dismissed movies, and records attributed feedback
+transactionally. Identical recommendation request IDs replay for 24 hours;
+expired IDs return 409 rather than being silently repurposed. Fresh requests
+recheck the account revision before committing an impression. Unrelated users
+do not invalidate each other's snapshots. The popularity fallback requires
+authoritative database state and labels retrieval failures as degraded.
+
+`scripts/model_v2.py` verifies or launches an item-only bundle. Its model digest
+is the manifest SHA-256, which covers all artifact hashes. Launch only through
+this verifier with immutable files; the C++ process checks the supplied identity,
+not the cryptographic provenance of a manually supplied command-line digest.
+RSV1 and historical bundles remain unchanged. RSV2 is CPU-only in this release;
+attempting vector-only CUDA serving fails explicitly.
+
+RSV2 wire values are little-endian. Frame: uint32 magic `0x52535632`, uint32
+payload length. Request payload: uint64 request ID, uint32 remaining timeout in
+microseconds (1..1,000,000), uint32 dimension (1..4096), uint32 count (1..512),
+32-byte model digest, then dimension float32 values. Response payload: uint64
+request ID, uint32 status, uint32 count, 32-byte actual model digest, then count
+pairs of uint32 dense item row and float32 score. Only the authenticated API
+maps these rows to movie IDs. Never publish the raw retrieval port.
+
+The PostgreSQL/C++ test suite covers numerical fold-in parity, ANN candidate
+recall on synthetic vectors, malformed frames, model mismatch, account-scoped
+idempotency, concurrent writes, revision races and database-failure closure.
+This does not establish MovieLens quality, full-stack capacity or deployment.

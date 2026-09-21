@@ -19,7 +19,7 @@ This fixes that end of the project:
      and the held-out interactions as ground truth
 
 Ratings are treated as implicit signal: a rating >= --min-rating is a positive
-interaction with confidence 1 + alpha * rating. Predicting the rating value is
+interaction with constant confidence 1 + alpha. Predicting the rating value is
 a different task from ranking a catalog, and ranking is what is being served.
 
 Vectors are L2-normalised on the way out, because the engine scores with inner

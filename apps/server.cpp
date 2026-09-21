@@ -2,6 +2,7 @@
 #include "recserve/net.hpp"
 #include "recserve/rss.hpp"
 #include "recserve/gpu_batcher.hpp"
+#include "recserve/protocol_v2.hpp"
 #include <csignal>
 #include <iostream>
 #include <sstream>
@@ -23,10 +24,13 @@ int run(int argc, char** argv) {
   int io_ms = 250, run_seconds = 0;
   int batch_size = 8, batch_wait_us = 100;
   bool synthetic = false;
+  bool vectors_only = false;
+  std::string model_hex;
   std::string bind_address = "127.0.0.1", catalog, index, queries, backend = "hnsw";
   for (int i = 1; i < argc; ++i) {
     const std::string flag = argv[i];
     if (flag == "--synthetic") { synthetic = true; continue; }
+    if (flag == "--vectors-only") { vectors_only = true; continue; }
     if (i + 1 >= argc) throw std::invalid_argument("missing value for " + flag);
     const std::string value = argv[++i];
     if (flag == "--port") port = std::stoi(value);
@@ -41,6 +45,7 @@ int run(int argc, char** argv) {
     else if (flag == "--catalog") catalog = value;
     else if (flag == "--index") index = value;
     else if (flag == "--queries") queries = value;
+    else if (flag == "--model-digest") model_hex = value;
     else if (flag == "--backend") backend = value;
     else if (flag == "--batch") batch_size = std::stoi(value);
     else if (flag == "--batch-wait-us") batch_wait_us = std::stoi(value);
@@ -52,16 +57,26 @@ int run(int argc, char** argv) {
       batch_size < 1 || batch_size > 64 || batch_wait_us < 0 || batch_wait_us > 10000)
     throw std::invalid_argument("invalid server limits");
   if (backend != "hnsw" && backend != "simd" && backend != "cuda") throw std::invalid_argument("unknown backend");
-  if (synthetic ? !catalog.empty() || !queries.empty() || !index.empty() : catalog.empty() || queries.empty())
+  if (synthetic ? !catalog.empty() || !queries.empty() || !index.empty() : catalog.empty() || (!vectors_only && queries.empty()))
     throw std::invalid_argument("supply --catalog and --queries, or explicitly opt into --synthetic");
   if (!synthetic && backend == "hnsw" && index.empty()) throw std::invalid_argument("HNSW serving requires --index");
+  ModelDigest model_digest{};
+  if (!model_hex.empty()) {
+    if (model_hex.size() != 64 || !std::all_of(model_hex.begin(), model_hex.end(), [](char c) {
+          return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); }))
+      throw std::invalid_argument("model digest must be lowercase SHA-256");
+    for (std::size_t i = 0; i < 32; ++i)
+      model_digest[i] = static_cast<std::uint8_t>(std::stoul(model_hex.substr(i * 2, 2), nullptr, 16));
+  }
+  if (vectors_only && (model_hex.empty() || backend == "cuda" || synthetic || !queries.empty()))
+    throw std::invalid_argument("item-only vector serving requires a digest, CPU backend and real catalog without queries");
 
   Engine engine;
   engine.cfg.use_hnsw = backend == "hnsw";
   engine.cfg.kernel = Kernel::Simd;
   engine.cfg.build_threads = 1;
   if (synthetic) engine.init_random(items, 4096, dim, 7);
-  else if (!engine.load_fixture(catalog, index, 4096) || !engine.load_queries(queries))
+  else if (!engine.load_fixture(catalog, index, vectors_only ? 1 : 4096) || (!vectors_only && !engine.load_queries(queries)))
     throw std::runtime_error("artifact loading failed");
   std::unique_ptr<GpuBatcher> batcher;
   if (backend == "cuda") {
@@ -96,40 +111,57 @@ int run(int argc, char** argv) {
       counters.connection_queue.observe(now_us() - connection.accepted_us);
       const auto socket = connection.socket;
       auto frame_deadline = connection.accepted_us + static_cast<std::uint64_t>(io_ms) * 1000;
+      auto admitted_us = connection.accepted_us;
       while (!stopping) {
-        std::uint8_t frame[8 + kReqBytes];
+        std::vector<std::uint8_t> frame(8);
         bool clean_eof = false;
-        if (!transfer_until(socket, frame, 8, false, frame_deadline, &clean_eof)) {
+        if (!transfer_until(socket, frame.data(), 8, false, frame_deadline, &clean_eof)) {
           if (clean_eof) ++counters.clean_disconnect;
           else ++counters.io_failure;
           break;
         }
-        if (!valid_frame_header(frame)) { ++counters.bad; break; }
-        if (!transfer_until(socket, frame + 8, kReqBytes, false, frame_deadline)) { ++counters.io_failure; break; }
+        std::uint32_t payload = 0;
+        const bool vector_query = vector_frame_size(frame.data(), payload);
+        if (!vector_query && (!valid_frame_header(frame.data()) || vectors_only)) { ++counters.bad; break; }
+        if (!vector_query) payload = kReqBytes;
+        frame.resize(8 + payload);
+        if (!transfer_until(socket, frame.data() + 8, payload, false, frame_deadline)) { ++counters.io_failure; break; }
         Request request;
-        if (!decode_request(frame, sizeof(frame), request)) { ++counters.bad; break; }
+        VectorRequest vector_request;
+        if (vector_query) {
+          if (!decode_vector_request(frame, vector_request)) { ++counters.bad; break; }
+          request.id = vector_request.id;
+          request.timeout_us = vector_request.timeout_us;
+        } else if (!decode_request(frame.data(), frame.size(), request)) { ++counters.bad; break; }
         ++counters.requests;
         const auto start = now_us();
         Response response;
         response.id = request.id;
-        if (request.user_id >= static_cast<unsigned>(engine.n_queries())) response.status = Status::BadRequest;
+        if (vector_query) {
+          if (model_hex.empty() || vector_request.model != model_digest || backend == "cuda") response.status = Status::BadRequest;
+          else if (start - admitted_us >= request.timeout_us) response.status = Status::Timeout;
+          else try { response = engine.retrieve_vector(request.id, vector_request.query, vector_request.count); }
+          catch (const std::exception&) { response.status = Status::Unavailable; }
+        }
+        else if (request.user_id >= static_cast<unsigned>(engine.n_queries())) response.status = Status::BadRequest;
         else try { response = batcher ? batcher->submit(request).get() : engine.recommend_sync(request); }
         catch (const std::exception&) { response.status = Status::Unavailable; }
         const auto elapsed = now_us() - start;
         counters.duration_us += elapsed;
         counters.request_compute.observe(elapsed);
-        if (response.status == Status::Ok && elapsed > request.timeout_us) {
+        if (response.status == Status::Ok && (vector_query ? now_us() - admitted_us : elapsed) > request.timeout_us) {
           response.status = Status::Timeout; response.items.clear();
         }
         if (response.status == Status::Ok) ++counters.ok;
         else if (response.status == Status::Timeout) ++counters.timeout;
         else if (response.status == Status::BadRequest) ++counters.bad;
         else ++counters.unavailable;
-        auto output = encode_response(response);
+        auto output = vector_query ? encode_vector_response(response, model_digest) : encode_response(response);
         if (!transfer_until(socket, output.data(), output.size(), true, now_us() + static_cast<std::uint64_t>(io_ms) * 1000)) {
           ++counters.io_failure; break;
         }
         frame_deadline = now_us() + static_cast<std::uint64_t>(io_ms) * 1000;
+        admitted_us = now_us();
       }
       net_close(socket); --counters.active;
     }

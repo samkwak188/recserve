@@ -4,7 +4,7 @@ import secrets
 from urllib.parse import urlsplit
 
 import anyio
-from fastapi import FastAPI, Depends, HTTPException, Request, Response
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
 from typing import Literal
@@ -15,7 +15,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .config import Settings
 from .db import Database, Principal, hashed, now_ms
 from .oidc import GoogleOIDC
-from .schema_v1 import users, sessions
+from .schema_v1 import users, sessions, preferences, item_states
 
 SESSION = '__Host-recserve'
 CSRF = '__Host-recserve-csrf'
@@ -104,6 +104,14 @@ def create_app(settings: Settings | None = None):
     app = FastAPI(title='RecServe movie pilot', version='2.0.0', lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings, app.state.db, app.state.oidc = settings, db, GoogleOIDC(settings)
+    app.state.policy = None
+    if settings.bundle:
+        from .model import Model
+        from .retrieval import Retrieval
+        from .policy import Policy
+        model = Model(settings.bundle)
+        app.state.policy = Policy(db, model, Retrieval(settings.upstream_host, settings.upstream_port,
+                                 model.digest, model.dimension), settings.consent_version)
     app.add_middleware(Bounds)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[urlsplit(settings.origin).hostname])
 
@@ -122,6 +130,12 @@ def create_app(settings: Settings | None = None):
             revision = connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
         if revision != '0001':
             raise HTTPException(503, 'Unsupported database revision')
+        if app.state.policy is None:
+            raise HTTPException(503, 'Model not configured')
+        try:
+            app.state.policy.retrieval.ready()
+        except (OSError, ValueError, EOFError):
+            raise HTTPException(503, 'Retrieval not ready') from None
         return {'status': 'ready', 'schema': revision}
 
     @app.get('/auth/login')
@@ -180,5 +194,52 @@ def create_app(settings: Settings | None = None):
         db.delete_account(actor.user_id)
         response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
         response.delete_cookie(CSRF, secure=True, samesite='lax')
+
+    from .contracts import Preferences, Recommendation, Event
+
+    def policy():
+        if app.state.policy is None:
+            raise HTTPException(503, 'Model not configured')
+        return app.state.policy
+
+    @app.get('/api/v2/movies')
+    def movies(query: str = Query('', max_length=100), cursor: int = Query(0, ge=0, le=100000),
+               actor: Principal = Depends(principal)):
+        service = policy()
+        with db.engine.begin() as tx:
+            service.account(tx, actor.user_id)
+        found = [m for m in service.model.movies if m['available'] and query.casefold() in m['title'].casefold()]
+        return {'items': found[cursor:cursor + 20], 'next_cursor': cursor + 20 if cursor + 20 < len(found) else None}
+
+    @app.get('/api/v2/preferences')
+    def get_preferences(actor: Principal = Depends(principal)):
+        service = policy()
+        with db.engine.begin() as tx:
+            user = service.account(tx, actor.user_id)
+            items = [dict(row) for row in tx.execute(select(preferences.c.item_id, preferences.c.value).where(
+                preferences.c.user_id == actor.user_id)).mappings()]
+        return {'items': items, 'preference_revision': user['revision']}
+
+    @app.put('/api/v2/preferences')
+    def set_preferences(payload: Preferences, actor: Principal = Depends(principal)):
+        return policy().change_preferences(actor.user_id, payload)
+
+    @app.post('/api/v2/recommendations')
+    def recommendations(payload: Recommendation, actor: Principal = Depends(principal)):
+        return policy().recommend(actor.user_id, payload)
+
+    @app.post('/api/v2/events')
+    def feedback(payload: Event, actor: Principal = Depends(principal)):
+        return policy().event(actor.user_id, payload)
+
+    @app.get('/api/v2/watchlist')
+    def watchlist(actor: Principal = Depends(principal)):
+        service = policy()
+        with db.engine.begin() as tx:
+            service.account(tx, actor.user_id)
+            states = tx.execute(select(item_states).where(item_states.c.user_id == actor.user_id)).mappings().all()
+        return {'items': [dict(service.model.movies[service.model.rows[row['item_id']]],
+            saved=row['saved'], watched=row['watched'], dismissed=row['dismissed'])
+            for row in states if row['item_id'] in service.model.rows]}
 
     return app

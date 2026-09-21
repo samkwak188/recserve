@@ -158,6 +158,25 @@ class Engine {
     return user_queries_.data() + static_cast<std::size_t>(u % n_user_queries_) * cfg.dim;
   }
 
+  // Item-only retrieval: no fixture identity, feature lookup or legacy ranker.
+  Response retrieve_vector(RequestId id, const std::vector<float>& query, std::uint32_t count) {
+    Response response;
+    response.id = id;
+    if (query.size() != static_cast<std::size_t>(cat.dim) || count < 1 || count > kMaxK ||
+        !std::all_of(query.begin(), query.end(), [](float x) { return std::isfinite(x); })) {
+      response.status = Status::BadRequest;
+      return response;
+    }
+    const auto start = now_us();
+    const int k = std::min(static_cast<int>(count), cat.n);
+    auto candidates = cfg.use_hnsw ? index.retrieve(cat, query.data(), nullptr, k, cfg.ef_search, Kernel::Simd)
+                                   : index.brute(cat, query.data(), nullptr, k, Kernel::Simd);
+    for (const auto& candidate : candidates) response.items.push_back({candidate.id, candidate.score});
+    response.retrieve_us = static_cast<std::uint32_t>(now_us() - start);
+    response.status = Status::Ok;
+    return response;
+  }
+
   void start_pool() {
     int n = cfg.workers;
     if (n <= 0) n = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
