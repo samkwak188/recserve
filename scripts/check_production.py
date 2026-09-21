@@ -33,8 +33,9 @@ def main():
         port = mapping['NetworkSettings']['Ports']['5432/tcp'][0]['HostPort']
         env['DATABASE_URL'] = f'postgresql+psycopg://postgres:{password}@127.0.0.1:{port}/recserve_test'
         subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=ROOT, env=env, check=True)
-        subprocess.run([sys.executable, '-m', 'pytest', 'tests/production', '-q', '--tb=short'],
-                       cwd=ROOT, env=env, check=True)
+        command = ([sys.executable, 'scripts/browser_fixture.py'] if '--browser' in sys.argv else
+                   [sys.executable, '-m', 'pytest', 'tests/production', '-q', '--tb=short'])
+        subprocess.run(command, cwd=ROOT, env=env, check=True)
         print('PostgreSQL migrations and production integration checks passed')
     finally:
         subprocess.run(['docker', 'rm', '-f', name], stdout=subprocess.DEVNULL, check=False)

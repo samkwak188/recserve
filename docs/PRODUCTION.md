@@ -108,3 +108,20 @@ The first small-snapshot run selected popularity: ALS's held-out NDCG difference
 interval crossed zero. Raw reports and immutable bundles are under
 `.cache/production/quality`; a compact source-bound summary is published in
 `results/production-quality-small.json`. No old benchmark is overwritten.
+
+## Browser application
+
+The React/Vite application is under `web/`. OpenAPI is generated with
+`scripts/export_openapi.py`; `npm run types` generates TypeScript interfaces.
+`npm ci`, `npm run build` and `npx playwright install chromium` prepare the
+browser stage. Windows uses `scripts/Check-Web.ps1` (a process-local execution
+policy override is used by the runner; no machine-wide policy is changed).
+
+The `browser` stage runs Chromium against real HTTPS, PostgreSQL and C++ with
+ephemeral synthetic accounts. It covers consent, five explicit preferences,
+recommendations, visible-impression attribution, saving, retry idempotency,
+watchlist, export, deletion, mobile empty states, logout and keyboard access.
+Generated screenshots are under `.cache/production/browser/<run>/`; they are
+test-fixture views, not real users or a public deployment. The fixture's
+self-signed certificate exception is limited to Playwright test configuration.
+Production uses Caddy and trusted HTTPS certificates.

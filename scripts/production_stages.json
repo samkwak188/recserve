@@ -10,7 +10,14 @@
     {"name": "build", "argv": ["cmake", "--build", "build-production", "-j", "4"], "timeout_s": 900},
     {"name": "postgres-api", "argv": ["{python}", "scripts/check_production.py"], "timeout_s": 600}
   ]},
-  "browser": {"commands": [{"name": "browser", "argv": ["{python}", "scripts/check_browser.py"], "timeout_s": 600}]},
+  "browser": {
+    "artifacts": [".cache/production/browser/*/report.json", ".cache/production/browser/*/*.png"],
+    "commands": [
+      {"name": "configure", "argv": ["cmake", "-S", ".", "-B", "build-production", "-DCMAKE_BUILD_TYPE=Release", "-DRECSERVE_WITH_CUDA=OFF"]},
+      {"name": "build-fixture", "argv": ["cmake", "--build", "build-production", "--target", "recserve_server", "recserve_fixture", "-j", "4"], "timeout_s": 900},
+      {"name": "browser", "argv": ["{python}", "scripts/check_browser.py"], "timeout_s": 600}
+    ]
+  },
   "quality": {
     "inputs": ["data/movielens/ml-small.zip", "build-production/recserve_server", "build-production/recserve_fixture"],
     "artifacts": [".cache/production/quality/small-*/report.json", ".cache/production/quality/small-*/release/*"],

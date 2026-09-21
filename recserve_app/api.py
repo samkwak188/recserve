@@ -68,10 +68,12 @@ class Bounds:
 
             async def secure_send(message):
                 if message['type'] == 'http.response.start':
+                    csp = (b"default-src 'none'; frame-ancestors 'none'" if scope['path'].startswith(('/api/', '/auth/'))
+                           else b"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
                     message.setdefault('headers', []).extend([
                         (b'cache-control', b'no-store'), (b'x-content-type-options', b'nosniff'),
                         (b'referrer-policy', b'no-referrer'), (b'x-frame-options', b'DENY'),
-                        (b'content-security-policy', b"default-src 'none'; frame-ancestors 'none'"),
+                        (b'content-security-policy', csp),
                         (b'strict-transport-security', b'max-age=31536000')])
                 await send(message)
             await self.app(scope, bounded_receive, secure_send)
@@ -80,6 +82,8 @@ class Bounds:
 
 
 def principal(request: Request) -> Principal:
+    if 'user_id' in request.query_params:
+        raise HTTPException(422, 'Identity is derived from the session')
     db = request.app.state.db
     result = db.authenticate(request.cookies.get(SESSION, ''))
     if request.method not in ('GET', 'HEAD', 'OPTIONS'):

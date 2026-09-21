@@ -35,3 +35,6 @@ web/dist/
 .terraform/
 *.tfvars
 !*.tfvars.example
+*.tsbuildinfo
+web/test-results/
+web/playwright-report/

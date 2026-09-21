@@ -90,7 +90,7 @@ def main() -> int:
     dependencies = subprocess.check_output([sys.executable, '-m', 'pip', 'freeze'], text=True)
     identity.update(python=sys.version, platform=platform.platform(), dependencies=dependencies,
                     executable=str(Path(sys.executable).resolve()), stage=stage)
-    for tool in ('cmake', 'c++', 'node', 'docker'):
+    for tool in ('cmake', 'c++', 'node', 'node.exe', 'docker'):
         try:
             identity[tool] = subprocess.check_output([tool, '--version'], stderr=subprocess.STDOUT,
                                                     text=True, timeout=10).splitlines()[0]
