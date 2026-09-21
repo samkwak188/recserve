@@ -25,3 +25,13 @@ data/offline/
 data/*.csv
 !data/quality_fixture.csv
 data/offline/**
+node_modules/
+web/dist/
+.env
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example

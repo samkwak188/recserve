@@ -1,0 +1,184 @@
+import asyncio
+from contextlib import asynccontextmanager
+import secrets
+from urllib.parse import urlsplit
+
+import anyio
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel, ConfigDict
+from typing import Literal
+from sqlalchemy import select, update, delete, text
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from .config import Settings
+from .db import Database, Principal, hashed, now_ms
+from .oidc import GoogleOIDC
+from .schema_v1 import users, sessions
+
+SESSION = '__Host-recserve'
+CSRF = '__Host-recserve-csrf'
+FLOW = '__Host-recserve-flow'
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+
+class Consent(StrictModel):
+    adult: Literal[True]
+    research: Literal[True]
+
+
+class Bounds:
+    """Bound admission and full-body reads before the framework parses JSON."""
+    def __init__(self, app):
+        self.app, self.active = app, 0
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.app(scope, receive, send)
+        if self.active >= 64:
+            return await JSONResponse({'detail': 'Service busy'}, 503)(scope, receive, send)
+        self.active += 1
+        try:
+            body = bytearray()
+            deadline = asyncio.get_running_loop().time() + 5
+            while True:
+                try:
+                    message = await asyncio.wait_for(receive(), max(0.001, deadline - asyncio.get_running_loop().time()))
+                except asyncio.TimeoutError:
+                    return await JSONResponse({'detail': 'Request timeout'}, 408)(scope, receive, send)
+                if message['type'] == 'http.disconnect':
+                    return
+                body.extend(message.get('body', b''))
+                if len(body) > 32768:
+                    return await JSONResponse({'detail': 'Body too large'}, 413)(scope, receive, send)
+                if not message.get('more_body'):
+                    break
+            sent = False
+
+            async def bounded_receive():
+                nonlocal sent
+                if not sent:
+                    sent = True
+                    return {'type': 'http.request', 'body': bytes(body), 'more_body': False}
+                return await receive()
+
+            async def secure_send(message):
+                if message['type'] == 'http.response.start':
+                    message.setdefault('headers', []).extend([
+                        (b'cache-control', b'no-store'), (b'x-content-type-options', b'nosniff'),
+                        (b'referrer-policy', b'no-referrer'), (b'x-frame-options', b'DENY'),
+                        (b'content-security-policy', b"default-src 'none'; frame-ancestors 'none'"),
+                        (b'strict-transport-security', b'max-age=31536000')])
+                await send(message)
+            await self.app(scope, bounded_receive, secure_send)
+        finally:
+            self.active -= 1
+
+
+def principal(request: Request) -> Principal:
+    db = request.app.state.db
+    result = db.authenticate(request.cookies.get(SESSION, ''))
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        if request.headers.get('origin') != request.app.state.settings.origin:
+            raise HTTPException(403, 'Same-origin request required')
+        if not secrets.compare_digest(hashed(request.headers.get('x-csrf-token', '')), result.csrf_hash):
+            raise HTTPException(403, 'Invalid CSRF token')
+        db.rate('mutation:' + result.user_id, 60)
+    return result
+
+
+def create_app(settings: Settings | None = None):
+    settings = settings or Settings.from_env()
+    db = Database(settings.database_url)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        anyio.to_thread.current_default_thread_limiter().total_tokens = 16
+        yield
+        db.engine.dispose()
+
+    app = FastAPI(title='RecServe movie pilot', version='2.0.0', lifespan=lifespan,
+                  docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.settings, app.state.db, app.state.oidc = settings, db, GoogleOIDC(settings)
+    app.add_middleware(Bounds)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=[urlsplit(settings.origin).hostname])
+
+    @app.exception_handler(SQLAlchemyError)
+    async def database_error(request, exc):
+        # Do not expose SQL, credentials, or user payloads through exception text.
+        return JSONResponse({'detail': 'Database unavailable'}, 503)
+
+    @app.get('/healthz')
+    def health():
+        return {'status': 'alive'}
+
+    @app.get('/readyz')
+    def ready():
+        with db.engine.connect() as connection:
+            revision = connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
+        if revision != '0001':
+            raise HTTPException(503, 'Unsupported database revision')
+        return {'status': 'ready', 'schema': revision}
+
+    @app.get('/auth/login')
+    async def login(request: Request):
+        address = request.client.host if request.client else 'unknown'
+        await anyio.to_thread.run_sync(db.rate, 'login:' + hashed(address), 10)
+        state, browser, nonce, verifier = await anyio.to_thread.run_sync(db.start_flow)
+        response = RedirectResponse(await app.state.oidc.authorize_url(state, nonce, verifier), 303)
+        response.set_cookie(FLOW, browser, max_age=600, secure=True, httponly=True, samesite='lax')
+        return response
+
+    @app.get('/auth/callback')
+    async def callback(request: Request, state: str = '', code: str = ''):
+        if not state or not code or len(state) > 128 or len(code) > 4096:
+            raise HTTPException(400, 'Invalid login response')
+        flow = await anyio.to_thread.run_sync(db.consume_flow, state, request.cookies.get(FLOW, ''))
+        try:
+            subject, email = await app.state.oidc.exchange(code, flow['nonce'], flow['verifier'])
+        except Exception:
+            raise HTTPException(400, 'Identity verification failed') from None
+        token, csrf = await anyio.to_thread.run_sync(db.login, subject, email)
+        response = RedirectResponse('/', 303)
+        response.delete_cookie(FLOW, secure=True, httponly=True, samesite='lax')
+        response.set_cookie(SESSION, token, max_age=604800, secure=True, httponly=True, samesite='lax')
+        response.set_cookie(CSRF, csrf, max_age=604800, secure=True, httponly=False, samesite='lax')
+        return response
+
+    @app.post('/auth/logout', status_code=204)
+    def logout(response: Response, actor: Principal = Depends(principal)):
+        with db.engine.begin() as tx:
+            tx.execute(delete(sessions).where(sessions.c.token_hash == actor.token_hash))
+        response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
+        response.delete_cookie(CSRF, secure=True, samesite='lax')
+
+    @app.get('/api/v2/me')
+    def me(actor: Principal = Depends(principal)):
+        with db.engine.begin() as tx:
+            row = db.lock_user(tx, actor.user_id)
+            return {'id': actor.user_id, 'consent_version': row['consent_version'],
+                    'required_consent': settings.consent_version, 'preference_revision': row['revision']}
+
+    @app.put('/api/v2/me/consent')
+    def consent(payload: Consent, actor: Principal = Depends(principal)):
+        with db.engine.begin() as tx:
+            db.lock_user(tx, actor.user_id)
+            tx.execute(update(users).where(users.c.id == actor.user_id).values(
+                consent_version=settings.consent_version, consent_ms=now_ms()))
+        return {'consent_version': settings.consent_version}
+
+    @app.get('/api/v2/me/export')
+    def export(actor: Principal = Depends(principal)):
+        return db.export(actor.user_id)
+
+    @app.delete('/api/v2/me', status_code=204)
+    def remove(response: Response, actor: Principal = Depends(principal)):
+        db.delete_account(actor.user_id)
+        response.delete_cookie(SESSION, secure=True, httponly=True, samesite='lax')
+        response.delete_cookie(CSRF, secure=True, samesite='lax')
+
+    return app

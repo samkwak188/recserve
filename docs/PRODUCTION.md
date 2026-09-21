@@ -36,3 +36,21 @@ MovieLens-small snapshots retain the GroupLens research license and attribution.
 MovieLens 25M stays a separate local evaluation dataset unless permission is
 resolved. No posters, streaming availability, payments, ads or fabricated lift.
 The selected release policy is the best validated baseline, including popularity.
+
+## Accounts checkpoint
+
+`bash scripts/setup_production.sh` installs the complete hash-locked Python
+environment. `-Stage integration` starts an isolated PostgreSQL container,
+applies Alembic migrations and runs real-database API and signed-token OIDC
+checks. It removes only that run's container, including its temporary test data.
+
+Google credentials and a PostgreSQL URL are mandatory startup configuration;
+there is no development login endpoint or anonymous identity fallback. Tests
+use ephemeral signed tokens and controlled provider responses, not real Google
+credentials. Production cookies require HTTPS even in local browser workflows.
+
+Account deletion immediately removes primary records and sessions and commits a
+deletion outbox entry. Off-host delivery and restore fencing are not yet wired;
+therefore this checkpoint is not cleared for real personal data. Export is a
+synchronous authenticated snapshot. Raw event retention requires scheduling the
+maintenance task before launch. Live Google configuration remains an owner gate.
