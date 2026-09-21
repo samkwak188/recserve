@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from collections import Counter
+from contextlib import closing
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -210,7 +211,7 @@ class PilotTests(unittest.TestCase):
     def test_backup_restore_and_model_mismatch(self):
         self.store.apply(self.event())
         backup_path = Path(self.temp.name)/'backup.sqlite'
-        with self.store.connection() as source, sqlite3.connect(backup_path) as dest:
+        with self.store.connection() as source, closing(sqlite3.connect(backup_path)) as dest:
             source.backup(dest)
         restored = Store(backup_path, 'fixture-sha')
         self.assertEqual(restored.snapshot('u'), self.store.snapshot('u'))

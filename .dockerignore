@@ -10,5 +10,8 @@
 !tests/**
 !scripts/
 !scripts/bundle.py
+!scripts/pilot_demo.py
+!recserve_pilot/
+!recserve_pilot/**
 !data/
 !data/quality_fixture.csv

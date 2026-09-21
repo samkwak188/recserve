@@ -6,6 +6,8 @@ COPY include/ include/
 COPY src/ src/
 COPY apps/ apps/
 COPY tests/ tests/
+COPY scripts/bundle.py scripts/pilot_demo.py scripts/
+COPY recserve_pilot/ recserve_pilot/
 COPY data/quality_fixture.csv data/quality_fixture.csv
 RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 4 && ctest --test-dir build --output-on-failure
 
