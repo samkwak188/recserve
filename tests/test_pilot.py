@@ -1,5 +1,6 @@
 """Policy, transactional races and actual process-crash recovery; no network data."""
 import concurrent.futures
+import http.client
 import json
 from pathlib import Path
 import sqlite3
@@ -102,10 +103,54 @@ class PilotTests(unittest.TestCase):
 
     def test_concurrent_duplicate_is_one_transaction(self):
         event = self.event()
+        def attempt(payload):
+            try:
+                return self.store.apply(payload)
+            except sqlite3.OperationalError as exc:
+                if exc.sqlite_errorcode != sqlite3.SQLITE_BUSY:
+                    raise
+                return None
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-            results = list(pool.map(self.store.apply, [event]*16))
+            results = list(pool.map(attempt, [event]*16))
+        # A bounded busy response asks clients to retry the same ID. Retry only
+        # after competing attempts finish; do not lengthen the runtime lock wait.
+        results = [self.store.apply(event) if r is None else r for r in results]
         self.assertEqual(sum(not r['duplicate'] for r in results), 1)
         self.assertEqual(self.store.snapshot('u')['features'][event['item_id']], (1, 0))
+
+    def test_http_busy_retry_preserves_one_effect(self):
+        event = self.event()
+        server = Server(('127.0.0.1', 0), self.pilot)
+        thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .01})
+        thread.start()
+        def send():
+            with closing(http.client.HTTPConnection(*server.server_address, timeout=5)) as client:
+                client.request('POST', '/v1/events', body=json.dumps(event),
+                               headers={'Content-Type': 'application/json'})
+                response = client.getresponse()
+                return response.status, json.loads(response.read())
+        try:
+            with self.store.connection() as blocker:
+                self.assertEqual(blocker.execute('PRAGMA busy_timeout').fetchone()[0], 250)
+                blocker.execute('BEGIN IMMEDIATE')
+                status, body = send()
+                self.assertEqual(status, 503)
+                self.assertIn('retry the same ID', body['error'])
+                self.assertEqual(blocker.execute('SELECT COUNT(*) FROM events').fetchone()[0], 0)
+                blocker.rollback()
+            status, first = send()
+            self.assertEqual(status, 200)
+            self.assertFalse(first['duplicate'])
+            status, duplicate = send()
+            self.assertEqual(status, 200)
+            self.assertTrue(duplicate['duplicate'])
+            self.assertEqual(first['sequence'], duplicate['sequence'])
+            self.assertEqual(self.store.snapshot('u')['features'][event['item_id']], (1, 0))
+            self.assertEqual(self.store.snapshot('u')['generation'], 1)
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+            server.server_close()
 
     def test_process_crashes_before_and_after_commit(self):
         event = self.event()

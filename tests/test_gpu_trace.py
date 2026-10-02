@@ -1,9 +1,11 @@
 """Trace-integrity gates run in hosted CPU CI; no GPU availability is implied."""
 from pathlib import Path
 import sqlite3
+import sys
 import tempfile
 import unittest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.profile_gpu import timeline
 
 
