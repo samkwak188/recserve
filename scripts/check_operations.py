@@ -164,6 +164,8 @@ def main():
                 if result.returncode == 0:
                     break
                 time.sleep(.1)
+            # docker cp preserves Caddy's restrictive mode; only the public CA is shared.
+            certificate.chmod(0o644)
             context = ssl.create_default_context(cafile=str(certificate))
             if args.monitoring:
                 from scripts.monitoring import verify_monitoring
