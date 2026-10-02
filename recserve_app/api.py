@@ -17,7 +17,7 @@ from .db import Database, Principal, hashed, now_ms
 from .oidc import GoogleOIDC
 from .schema_v1 import users, sessions, preferences, item_states
 from .privacy import S3DeletionLedger, reconcile
-from .telemetry import Metrics, Telemetry
+from .telemetry import Metrics, Telemetry, database_failure_reason
 
 SESSION = '__Host-recserve'
 CSRF = '__Host-recserve-csrf'
@@ -135,6 +135,9 @@ def create_app(settings: Settings | None = None, ledger=None):
     app.state.settings, app.state.db, app.state.oidc = settings, db, GoogleOIDC(settings)
     app.state.ledger, app.state.privacy_ready = ledger, False
     app.state.metrics = Metrics()
+    app.state.metrics.pool_used.set_function(lambda: db.engine.pool.checkedout())
+    app.state.metrics.pool_limit.set(8)  # Database: pool_size=4 plus max_overflow=4
+    app.state.metrics.privacy_ready.set_function(lambda: int(app.state.privacy_ready))
     app.state.policy = None
     if settings.bundle:
         from .model import Model
@@ -142,7 +145,7 @@ def create_app(settings: Settings | None = None, ledger=None):
         from .policy import Policy
         model = Model(settings.bundle)
         app.state.policy = Policy(db, model, Retrieval(settings.upstream_host, settings.upstream_port,
-                                 model.digest, model.dimension), settings.consent_version)
+                                 model.digest, model.dimension, metrics=app.state.metrics), settings.consent_version)
     app.add_middleware(Bounds)
     app.add_middleware(Telemetry, metrics=app.state.metrics)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[urlsplit(settings.origin).hostname])
@@ -152,6 +155,7 @@ def create_app(settings: Settings | None = None, ledger=None):
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request, exc):
         # Do not expose SQL, credentials, or user payloads through exception text.
+        app.state.metrics.database_errors.labels(database_failure_reason(exc)).inc()
         return JSONResponse({'detail': 'Database unavailable'}, 503)
 
     @app.get('/healthz')

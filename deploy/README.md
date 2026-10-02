@@ -115,3 +115,31 @@ External HTTPS probing, alert delivery, WAL/backup age, disk/RAM, database pool
 and retrieval queue monitoring still need a deployed collector and rehearsed
 alert path. Missing monitoring is unknown, not uptime. Do not invite users
 until these checks, cloud restore/rollback and the qualification campaign pass.
+
+## Diagnosing dependency pressure
+
+Compare `recserve_database_pool_checked_out` with
+`recserve_database_pool_capacity` on each API process. A
+`recserve_database_errors_total{reason="pool_timeout"}` increase means admission
+outpaced that process's eight-connection limit; inspect request latency and
+PostgreSQL activity before changing limits. `lock_timeout` identifies the
+configured lock-wait limit; `query_cancelled` includes statement timeout and
+other PostgreSQL query cancellations. `connection` identifies invalidated
+connections or SQLSTATE class 08; remaining errors use `other`. Counts cover
+HTTP database failures, not all background maintenance failures.
+
+`recserve_retrieval_duration_seconds` measures each attempt across connect,
+send and receive, including readiness probes. Outcomes are `success`,
+`timeout`, `connection`, `protocol`, or `error`; inspect their rates alongside
+`recserve_recommendations_total{degraded="true"}`. Protocol rejection includes
+model mismatch: verify the immutable API/retrieval pair before restarting.
+The privacy gauge reports the last completed reconciliation, not a live probe.
+These are process-local signals; process restarts reset counters. Missing
+scrapes are unknown, not zero failures. No external alert delivery is configured.
+
+The PostgreSQL integration job holds all eight pool connections and separately
+holds an account row lock. It verifies bounded 503 responses, distinct counters,
+rollback, release, and one successful effect after an identical retry. Real
+socket tests cover disconnects, malformed responses and a trickling peer that
+cannot extend the absolute retrieval deadline. These are fault assertions, not
+capacity measurements or deployed alert evidence.

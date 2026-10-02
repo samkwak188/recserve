@@ -2,6 +2,7 @@ import json
 import time
 import uuid
 from prometheus_client import CollectorRegistry, Counter, Histogram, Gauge
+from sqlalchemy.exc import TimeoutError as PoolTimeout, DBAPIError
 
 
 class Metrics:
@@ -12,6 +13,32 @@ class Metrics:
             buckets=(.001, .005, .01, .025, .05, .075, .1, .2, .5, 1, 2, 5), registry=self.registry)
         self.active = Gauge('recserve_http_active', 'In-flight HTTP requests', registry=self.registry)
         self.recommendations = Counter('recserve_recommendations_total', 'Recommendation policy outcomes', ['source', 'degraded'], registry=self.registry)
+
+        self.database_errors = Counter('recserve_database_errors_total',
+            'HTTP failures caused by the database', ['reason'], registry=self.registry)
+        self.pool_used = Gauge('recserve_database_pool_checked_out',
+            'Connections currently checked out by this API process', registry=self.registry)
+        self.pool_limit = Gauge('recserve_database_pool_capacity',
+            'Maximum connections allowed by this API process', registry=self.registry)
+        self.privacy_ready = Gauge('recserve_privacy_ready',
+            'Last completed privacy reconciliation succeeded (not a live ledger probe)', registry=self.registry)
+        self.retrieval = Histogram('recserve_retrieval_duration_seconds',
+            'Retrieval wall time including connect, send and receive; includes readiness probes',
+            ['outcome'], buckets=(.001, .005, .01, .025, .05, .1, .2, .3, 1), registry=self.registry)
+
+
+def database_failure_reason(exc):
+    # Bounded labels only: never exception messages, SQL, URLs or account data.
+    if isinstance(exc, PoolTimeout):
+        return 'pool_timeout'
+    if isinstance(exc, DBAPIError):
+        state = getattr(exc.orig, 'sqlstate', None)
+        if state in ('55P03', '57014', '40001', '40P01'):
+            return {'55P03': 'lock_timeout', '57014': 'query_cancelled',
+                    '40001': 'serialization', '40P01': 'deadlock'}[state]
+        if exc.connection_invalidated or (state and state.startswith('08')):
+            return 'connection'
+    return 'other'
 
 
 class Telemetry:

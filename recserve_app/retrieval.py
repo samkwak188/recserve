@@ -8,7 +8,8 @@ MAGIC = 0x52535632
 
 
 class Retrieval:
-    def __init__(self, host, port, digest, dim):
+    def __init__(self, host, port, digest, dim, metrics=None):
+        self.metrics = metrics
         self.host, self.port, self.digest, self.dim = host, port, digest, dim
         # Resolve during paired-service startup, never on a latency-bounded request.
         # Recreating retrieval with a different address requires restarting its API pair.
@@ -31,7 +32,26 @@ class Retrieval:
         raise error
 
     def query(self, vector, count, deadline=None):
-        deadline = deadline or time.monotonic() + .2
+        started, outcome = time.monotonic(), 'error'
+        try:
+            result = self._query(vector, count, deadline)
+            outcome = 'success'
+            return result
+        except TimeoutError:
+            outcome = 'timeout'
+            raise
+        except (OSError, EOFError):
+            outcome = 'connection'
+            raise
+        except ValueError:
+            outcome = 'protocol'
+            raise
+        finally:
+            if self.metrics is not None:
+                self.metrics.retrieval.labels(outcome).observe(time.monotonic() - started)
+
+    def _query(self, vector, count, deadline):
+        deadline = time.monotonic() + .2 if deadline is None else deadline
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError('Retrieval deadline expired')
