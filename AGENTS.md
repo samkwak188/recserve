@@ -1,5 +1,21 @@
 # Agent handoff
 
+## GPU warmup and measurement continuation: 2026-10-02
+
+Read results/GPU_WARMUP.md and gpu-warmup-2026-10-02.json. Runtime 5890b27 adds
+opt-in --gpu-warmup on the serving worker, every configured batch count, before
+sockets open. Warmup failures abort startup. CPU/default behavior remains.
+Harness 36e8663 fixes late responses incorrectly counted as success when asyncio
+timeout callbacks run late. Historical open-loop deadline counts need the new
+caveat; never relabel them. Corrected campaign: cold first misses 6/6, warm 0/6;
+one warm post-idle miss and burst misses remain. Warmup does not improve overall
+failure counts in this experiment. Five local CPU/CUDA/sanitizer configurations
+pass, as do 36 Python tests. Both checkpoints passed all 20 hosted jobs. Next:
+isolate idle/burst causes and compare quality-matched CPU/GPU with strict
+completion deadlines. Keep CPU default and the separate unpassed GPU sanitizer
+gate. Cloud inputs and off-host operations remain unresolved.
+
+
 ## GPU diagnosis continuation: 2026-10-02
 
 Read results/GPU_FIRST_CALL.md and its source-bound JSON. Six fresh processes per

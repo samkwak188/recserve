@@ -34,6 +34,8 @@ in [the implementation ledger](docs/PRODUCTION.md). The latest
 [dependency diagnosis and recovery report](results/RELIABILITY_REPORT.md) covers
 real contention, forced process restarts, and encrypted restore checks. This
 remains local validation; external alerting and cloud qualification are open.
+The [GPU warmup experiment](results/GPU_WARMUP.md) documents an opt-in startup
+fix, a corrected client deadline harness, and remaining idle/burst failures.
 
 ## Three deliberate decisions
 

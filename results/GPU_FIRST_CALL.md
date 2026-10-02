@@ -90,3 +90,9 @@ Validation: all eight CUDA CTest entries and all 32 Python regression tests
 passed locally. Monitoring checkpoint 07a2edb separately passed all 20 hosted
 jobs (37057564356 and 37057564318). Hosted runners did not execute this GPU
 capture; the existing manual owner GPU workflow and sanitizer requirement remain.
+
+## Follow-up implementation
+
+The [explicit warmup experiment](GPU_WARMUP.md) implements the worker startup
+policy and repeats the comparison with corrected client deadline accounting.
+The original timeline above retains its original source and scope.
