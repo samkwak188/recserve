@@ -23,12 +23,13 @@ int run(int argc, char** argv) {
   int port = 9400, metrics_port = 9401, items = 4096, dim = 64, workers = 8, queue_limit = 64;
   int io_ms = 250, run_seconds = 0;
   int batch_size = 8, batch_wait_us = 100;
-  bool synthetic = false;
+  bool synthetic = false, gpu_warmup = false;
   bool vectors_only = false;
   std::string model_hex;
   std::string bind_address = "127.0.0.1", catalog, index, queries, backend = "hnsw";
   for (int i = 1; i < argc; ++i) {
     const std::string flag = argv[i];
+    if (flag == "--gpu-warmup") { gpu_warmup = true; continue; }
     if (flag == "--synthetic") { synthetic = true; continue; }
     if (flag == "--vectors-only") { vectors_only = true; continue; }
     if (i + 1 >= argc) throw std::invalid_argument("missing value for " + flag);
@@ -60,6 +61,7 @@ int run(int argc, char** argv) {
   if (synthetic ? !catalog.empty() || !queries.empty() || !index.empty() : catalog.empty() || (!vectors_only && queries.empty()))
     throw std::invalid_argument("supply --catalog and --queries, or explicitly opt into --synthetic");
   if (!synthetic && backend == "hnsw" && index.empty()) throw std::invalid_argument("HNSW serving requires --index");
+  if (gpu_warmup && backend != "cuda") throw std::invalid_argument("--gpu-warmup requires --backend cuda");
   ModelDigest model_digest{};
   if (!model_hex.empty()) {
     if (model_hex.size() != 64 || !std::all_of(model_hex.begin(), model_hex.end(), [](char c) {
@@ -83,7 +85,7 @@ int run(int argc, char** argv) {
     std::string error;
     auto gpu = make_gpu_scorer(engine.cat.aos.data(), engine.cat.n, engine.cat.dim, batch_size, &error);
     if (!gpu) throw std::runtime_error(error);
-    batcher = std::make_unique<GpuBatcher>(engine, std::move(gpu), batch_size, static_cast<std::uint32_t>(batch_wait_us));
+    batcher = std::make_unique<GpuBatcher>(engine, std::move(gpu), batch_size, static_cast<std::uint32_t>(batch_wait_us), 64, gpu_warmup);
   }
   const auto listener = listen_tcp(static_cast<std::uint16_t>(port), bind_address.c_str());
   if (listener == net_invalid()) throw std::runtime_error("serving bind failed");
@@ -205,6 +207,8 @@ int run(int argc, char** argv) {
                           << "recserve_gpu_healthy " << batcher->gpu_healthy << '\n'
                           << "recserve_gpu_batch_max " << batcher->max_observed_batch << '\n';
         if (batcher) {
+          body << "recserve_gpu_warmup_batches_total " << batcher->warmup_batches << '\n'
+               << "recserve_gpu_warmup_wall_microseconds " << batcher->warmup_wall_us << '\n';
           batcher->queue_time.write(body, "recserve_gpu_queue_microseconds");
           batcher->gpu_wall_time.write(body, "recserve_gpu_wall_microseconds");
           batcher->h2d_time.write(body, "recserve_gpu_h2d_microseconds");

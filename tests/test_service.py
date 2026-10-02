@@ -55,8 +55,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--build', default='build')
     parser.add_argument('--backend', default='hnsw')
+    parser.add_argument('--gpu-warmup', action='store_true')
     args = parser.parse_args()
     binary = pathlib.Path(args.build) / ('recserve_server.exe' if os.name == 'nt' else 'recserve_server')
+    if args.backend == 'hnsw':
+        invalid = subprocess.run([str(binary.resolve()), '--synthetic', '--gpu-warmup'],
+                                 capture_output=True, text=True, timeout=10)
+        assert invalid.returncode == 2 and '--gpu-warmup requires --backend cuda' in invalid.stderr
     port, admin = free_port(), free_port()
     while admin == port:
         admin = free_port()
@@ -64,6 +69,8 @@ def main():
         command = [str(binary.resolve()), '--synthetic', '--items', '128', '--dim', '17', '--workers', '2',
                    '--queue', '2', '--io-ms', '300', '--port', str(port), '--metrics-port', str(admin),
                    '--run-seconds', '5', '--backend', args.backend, '--batch-wait-us', '10000']
+        if args.gpu_warmup:
+            command.append('--gpu-warmup')
         process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
         clients = []
         try:
@@ -76,6 +83,14 @@ def main():
                     if process.poll() is not None or time.monotonic() > deadline:
                         raise RuntimeError('server did not become ready')
                     time.sleep(.02)
+            if args.backend == 'cuda':
+                code, raw = http(admin, '/metrics')
+                initial = {k: int(v) for k, v in (line.split() for line in raw.splitlines())}
+                assert code == 200
+                assert initial['recserve_gpu_warmup_batches_total'] == (8 if args.gpu_warmup else 0)
+                assert initial['recserve_gpu_queries_total'] == 0
+                assert initial['recserve_gpu_batches_total'] == 0
+                assert initial['recserve_gpu_first_batch_wall_microseconds'] == 0
             with socket.create_connection(('127.0.0.1', port), timeout=2) as s:
                 status, items = request(s)
                 assert status == 0 and len(items) == 10 and len({i[0] for i in items}) == 10

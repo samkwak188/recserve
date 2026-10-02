@@ -21,6 +21,66 @@ class TestScorer : public GpuScorer {
   bool fail_;
 };
 
+struct Probe {
+  std::promise<void> entered;
+  std::shared_future<void> release;
+  std::vector<int> batches;
+  std::vector<int> topks;
+  std::vector<std::thread::id> threads;
+};
+class ProbeScorer : public TestScorer {
+ public:
+  ProbeScorer(Engine& engine, Probe& probe, bool fail = false) : TestScorer(engine, fail), probe_(probe) {}
+  void topk(const float* queries, int batch, int k, ScoredItem* output, GpuTiming* timing) override {
+    probe_.batches.push_back(batch);
+    probe_.topks.push_back(k);
+    probe_.threads.push_back(std::this_thread::get_id());
+    if (probe_.batches.size() == 1) {
+      probe_.entered.set_value();
+      if (probe_.release.valid()) probe_.release.wait();
+    }
+    TestScorer::topk(queries, batch, k, output, timing);
+  }
+ private:
+  Probe& probe_;
+};
+
+void test_warmup(Engine& engine) {
+  Probe cold;
+  {
+    GpuBatcher batcher(engine, std::make_unique<ProbeScorer>(engine, cold), 4, 0, 64);
+    require(cold.batches.empty() && batcher.warmup_batches == 0);
+  }
+  Probe warm;
+  std::promise<void> release;
+  warm.release = release.get_future().share();
+  auto entered = warm.entered.get_future();
+  auto startup = std::async(std::launch::async, [&] {
+    return std::make_unique<GpuBatcher>(engine, std::make_unique<ProbeScorer>(engine, warm), 4, 0, 64, true);
+  });
+  const bool reached = entered.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+  const bool held = startup.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout;
+  release.set_value(); // Release before assertions so test failure cannot strand the worker.
+  auto batcher = startup.get();
+  require(reached && held);
+  require(warm.batches == std::vector<int>({1, 2, 3, 4}));
+  for (auto k : warm.topks) require(k == 128);
+  require(batcher->warmup_batches == 4 && batcher->batches == 0 && batcher->gpu_queries == 0);
+  require(batcher->fallback == 0 && batcher->first_batch_wall_us == 0);
+  Request request; request.k = 10; request.retrieve_k = 32; request.timeout_us = 1000000;
+  require(batcher->submit(request).get().status == Status::Ok);
+  require(batcher->batches == 1 && batcher->gpu_queries == 1 && warm.batches.size() == 5);
+  for (auto thread : warm.threads) require(thread == warm.threads[0] && thread != std::this_thread::get_id());
+  batcher->stop();
+
+  Probe failed;
+  bool rejected = false;
+  try {
+    GpuBatcher broken(engine, std::make_unique<ProbeScorer>(engine, failed, true), 4, 0, 64, true);
+  } catch (const std::runtime_error& error) { rejected = std::string(error.what()) == "injected device failure"; }
+  require(rejected && failed.batches.size() == 1);
+}
+
 int main() {
   try {
     DurationHistogram histogram;
@@ -34,6 +94,7 @@ int main() {
     Engine engine;
     engine.cfg.use_hnsw = false; engine.cfg.kernel = Kernel::Simd;
     engine.init_random(128, 16, 17, 7);
+    test_warmup(engine);
     for (bool fail : {false, true}) {
       GpuBatcher batcher(engine, std::make_unique<TestScorer>(engine, fail), 8, 10000, 64);
       std::vector<std::future<Response>> pending;

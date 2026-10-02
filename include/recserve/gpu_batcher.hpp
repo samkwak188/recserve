@@ -9,14 +9,27 @@ namespace recserve {
 class GpuBatcher {
  public:
   GpuBatcher(Engine& engine, std::unique_ptr<GpuScorer> scorer, int max_batch = 8,
-             std::uint32_t wait_us = 100, std::size_t capacity = 64)
+             std::uint32_t wait_us = 100, std::size_t capacity = 64, bool warmup = false)
       : engine_(engine), scorer_(std::move(scorer)), max_batch_(max_batch), wait_us_(wait_us), capacity_(capacity) {
     if (!scorer_ || max_batch < 1 || max_batch > 64 || capacity < 1 || capacity > 4096 || wait_us > 10000 ||
         engine.cfg.use_hnsw || engine.cfg.kernel != Kernel::Simd)
       throw std::invalid_argument("batcher requires a scorer and CPU exact fallback engine");
     queries_.resize(static_cast<std::size_t>(max_batch) * engine.cat.dim);
     output_.resize(static_cast<std::size_t>(max_batch) * kMaxK);
-    thread_ = std::thread([this] { loop(); });
+    std::promise<void> started;
+    auto startup = started.get_future();
+    thread_ = std::thread([this, warmup, started = std::move(started)]() mutable {
+      try {
+        if (warmup) warmup_scorer();
+        started.set_value();
+      } catch (...) {
+        started.set_exception(std::current_exception());
+        return;
+      }
+      loop();
+    });
+    try { startup.get(); }
+    catch (...) { thread_.join(); throw; }
   }
   ~GpuBatcher() { stop(); }
   GpuBatcher(const GpuBatcher&) = delete;
@@ -39,10 +52,26 @@ class GpuBatcher {
   }
   std::atomic<std::uint64_t> batches{0}, gpu_queries{0}, fallback{0}, expired{0}, shed{0}, max_observed_batch{0};
   std::atomic<bool> gpu_healthy{true};
+  std::uint64_t warmup_batches = 0, warmup_wall_us = 0;
   DurationHistogram queue_time, gpu_wall_time, h2d_time, device_compute_time, d2h_time;
   std::atomic<std::uint64_t> first_batch_wall_us{0}, first_batch_device_us{0};
 
  private:
+  void warmup_scorer() {
+    if (engine_.n_queries() < 1) throw std::runtime_error("GPU warmup requires a query");
+    const auto start = now_us();
+    for (int i = 0; i < max_batch_; ++i)
+      std::copy_n(engine_.user_query(static_cast<UserId>(i % engine_.n_queries())), engine_.cat.dim,
+                  queries_.data() + static_cast<std::size_t>(i) * engine_.cat.dim);
+    // GEMM shape depends on actual batch count, including partial batches.
+    // The largest legal top-k exercises the selection kernels without publishing responses.
+    for (int count = 1; count <= max_batch_; ++count) {
+      scorer_->topk(queries_.data(), count, std::min(static_cast<int>(kMaxK), engine_.cat.n),
+                    output_.data(), nullptr);
+      ++warmup_batches;
+    }
+    warmup_wall_us = now_us() - start;
+  }
   struct Job { Request request; std::uint64_t submitted; std::promise<Response> promise; };
   void finish(Job& job, Status status) {
     Response response; response.id = job.request.id; response.status = status;

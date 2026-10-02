@@ -70,10 +70,13 @@ def main():
     parser.add_argument('--version', default='local-pilot')
     parser.add_argument('--binary', default='build/recserve_server')
     parser.add_argument('--backend', choices=['hnsw', 'simd', 'cuda'], default='hnsw')
+    parser.add_argument('--gpu-warmup', action='store_true')
     parser.add_argument('--bind', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=9400)
     parser.add_argument('--metrics-port', type=int, default=9401)
     args = parser.parse_args()
+    if args.gpu_warmup and (args.action != 'serve' or args.backend != 'cuda'):
+        parser.error('--gpu-warmup requires serve with --backend cuda')
     root = args.manifest.resolve().parent
     if args.action == 'create':
         if not args.meta or not args.index or args.meta.resolve().parent != root or args.index.resolve().parent != root:
@@ -97,6 +100,8 @@ def main():
         command = [binary, '--catalog', str(root/bundle['catalog']), '--queries', str(root/bundle['queries']),
                    '--index', str(root/bundle['index']), '--backend', args.backend, '--bind', args.bind,
                    '--port', str(args.port), '--metrics-port', str(args.metrics_port)]
+        if args.gpu_warmup:
+            command.append('--gpu-warmup')
         os.execv(binary, command)
 
 

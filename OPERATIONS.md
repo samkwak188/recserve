@@ -134,3 +134,26 @@ chain. GPU runtime images and vulnerability/signature gates remain release work.
 
 These are local procedures, not completed multi-replica rollback/restore drills.
 Release gates and remaining implementation details are in `EXECUTION_PLAN.md`.
+
+## Explicit GPU readiness warmup
+
+Add --gpu-warmup to recserve_server --backend cuda, or to the verified bundle
+serve command with --backend cuda. The default remains off; CPU backends reject
+the option. The authenticated RSV2 service remains CPU-only.
+
+Warmup executes on the same worker that serves GPU requests. It runs every batch
+count from one through --batch (maximum 64), with representative loaded queries
+and the largest valid top-k, before either serving or administrative sockets
+open. This covers partial GEMM batch shapes for the loaded catalog. Startup
+exceptions are propagated and the worker is joined; warmup failure never starts
+a service by silently falling back to CPU.
+
+recserve_gpu_warmup_batches_total and recserve_gpu_warmup_wall_microseconds report
+startup work. Request counts, first-request timing and stage histograms exclude
+warmup. It does not create impressions or feedback. Runtime GPU failures retain
+the existing visible exact-CPU fallback behavior.
+
+Warmup trades longer startup for removal of first-use work from requests; it is
+not a latency guarantee after arbitrary idle periods or a capacity qualification.
+The supervisor must enforce a startup deadline: a hung device call cannot be
+safely preempted inside this process. Keep the Compute Sanitizer release gate.
