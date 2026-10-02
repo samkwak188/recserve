@@ -157,3 +157,12 @@ Warmup trades longer startup for removal of first-use work from requests; it is
 not a latency guarantee after arbitrary idle periods or a capacity qualification.
 The supervisor must enforce a startup deadline: a hung device call cannot be
 safely preempted inside this process. Keep the Compute Sanitizer release gate.
+
+## Client deadline accounting correction
+
+The open-loop harness now checks completion against the absolute intended-arrival
+deadline even when asyncio's timeout callback has not run. Older harness versions
+could count a late response as successful during event-loop delays. Historical
+results remain at their original checkpoints, but their client failure counts
+cannot establish strict deadline compliance. Re-run deadline-sensitive comparisons
+with the corrected harness; do not silently relabel old measurements.

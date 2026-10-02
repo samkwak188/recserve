@@ -54,3 +54,11 @@ The original measurements above retain their checkpoint. The 2026-10-02
 cuBLAS heuristic range containing library loads, before device kernels execute.
 It preserves separate untraced controls and does not close the warmup, capacity
 or Compute Sanitizer gates.
+
+## Deadline-accounting caveat: 2026-10-02
+
+The historical client used cooperative timeout callbacks without an explicit
+completion-time check. A delayed event loop can therefore undercount deadline
+misses. These original counts are retained for provenance and do not establish
+strict 5 ms compliance. The later warmup campaign uses corrected absolute
+deadline accounting. First-call host/device instrumentation remains separate.

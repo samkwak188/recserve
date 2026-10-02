@@ -43,9 +43,15 @@ async def campaign(args):
                     rid, status, count = struct.unpack_from('<QII', response)
                     if rid != number or status > 4 or count > 512 or length != 16 + count * 8:
                         raise ValueError('invalid response')
-                    counts[{0: 'ok', 1: 'server_timeout', 2: 'server_loadshed', 3: 'bad_request', 4: 'unavailable'}[status]] += 1
-                    if status == 0:
-                        latency.append((time.monotonic() - intended) * 1e6)
+                    completed = time.monotonic()
+                    # Timer cancellation is cooperative: a delayed event loop can finish
+                    # reading before its overdue timeout callback runs.
+                    if completed - intended >= args.deadline_ms / 1000:
+                        counts['client_deadline'] += 1
+                    else:
+                        counts[{0: 'ok', 1: 'server_timeout', 2: 'server_loadshed', 3: 'bad_request', 4: 'unavailable'}[status]] += 1
+                        if status == 0:
+                            latency.append((completed - intended) * 1e6)
             except TimeoutError:
                 counts['client_deadline'] += 1
             except (OSError, EOFError, asyncio.IncompleteReadError, ValueError):
