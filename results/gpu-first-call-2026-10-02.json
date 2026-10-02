@@ -1,0 +1,4269 @@
+{
+  "status": "passed",
+  "scope": "First-call diagnostic only; CPU-default serving and GPU sanitizer gate remain unchanged.",
+  "campaigns": [
+    {
+      "started_utc": "2026-10-02T20:00:48.874559+00:00",
+      "source": {
+        "commit": "07a2edbaa46316c9ac48eee11d97ed545a02bda5",
+        "source_sha256": "371f8b4ac0f0797f879bbba2118090c06bc7f75609d9dba0dbdf94e44f8d282c"
+      },
+      "binary_sha256": "40fae3d0cc72f24cd37ae46891fbe403b666433f04b5a44ec69c803ab02d4e26",
+      "manifest_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+      "script_sha256": "fa5ff3a5b48c0b0957ac54b193e675ed6f457d6237eb77ec0074b7429fd36b55",
+      "nsys_version": "NVIDIA Nsight Systems version 2026.1.3.425-261338342291v0",
+      "device": "NVIDIA GeForce RTX 3060, 591.86",
+      "scope": "RSV1 single-query CUDA diagnostic; not the CPU-only RSV2 pilot, capacity, or sanitizer qualification.",
+      "design": "Three sequential requests per fresh process: cold, 50ms gap, configured idle gap. Interleaved trace/control.",
+      "caveats": [
+        "CUDA tracing changes timings; controls have no profiler.",
+        "Device kernel sums, host APIs and library ranges overlap and must not be added.",
+        "CPU sampling and context-switch tracing disabled; no OS/debugger policy changes.",
+        "Three requests do not establish tail latency or behavior after long idle periods."
+      ],
+      "rows": [
+        {
+          "repeat": 0,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-0-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "34221",
+              "--metrics-port",
+              "49519"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 82.86069,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.94858,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.934438,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 100,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 83141,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 77,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 86429,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 250,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 82341,
+              "recserve_gpu_first_batch_device_microseconds": 86115
+            },
+            "status": "passed"
+          }
+        },
+        {
+          "repeat": 2,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-2-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-2-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "35215",
+              "--metrics-port",
+              "37965"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 105.716472,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.908432,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.03704,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 110,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 106011,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 683,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 110023,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 188,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 105143,
+              "recserve_gpu_first_batch_device_microseconds": 110197
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 104.483358,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.031797,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.032169,
+                    "duration_ms": 0.007955,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 5.677491,
+                    "duration_ms": 2.651779,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 8.336527,
+                    "duration_ms": 0.00995,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 23.82089,
+                    "duration_ms": 13.17703,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 37.006619,
+                    "duration_ms": 0.011277,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 49.835808,
+                    "duration_ms": 11.872464,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 61.715405,
+                    "duration_ms": 0.009224,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 75.611167,
+                    "duration_ms": 14.271414,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 89.891948,
+                    "duration_ms": 0.001642,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 102.724909,
+                    "duration_ms": 0.001919,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 102.727573,
+                    "duration_ms": 0.662495,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 103.404611,
+                    "duration_ms": 0.190076,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 103.596253,
+                    "duration_ms": 0.000802,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 103.59993,
+                    "duration_ms": 0.000372,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 103.600837,
+                    "duration_ms": 0.59286,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 104.196018,
+                    "duration_ms": 0.000859,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 104.19809,
+                    "duration_ms": 0.000267,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 104.198682,
+                    "duration_ms": 0.081727,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 104.282195,
+                    "duration_ms": 0.000573,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 104.28356,
+                    "duration_ms": 0.00022,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 104.284038,
+                    "duration_ms": 0.064072,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 104.350325,
+                    "duration_ms": 0.0163,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 104.367646,
+                    "duration_ms": 0.031702,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 104.399826,
+                    "duration_ms": 0.007486,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 104.408038,
+                    "duration_ms": 0.07532,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.285831,
+                    "duration_ms": 102.328704
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 102.67242,
+                    "duration_ms": 0.7214
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 103.438031,
+                    "duration_ms": 0.005734,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 104.236283,
+                    "duration_ms": 0.014456,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 104.336682,
+                    "duration_ms": 0.014242,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 104.431195,
+                    "duration_ms": 0.014425,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048857
+              },
+              {
+                "first_copy_to_sync_ms": 0.326499,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.02476,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.025266,
+                    "duration_ms": 0.006101,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.094007,
+                    "duration_ms": 0.00127,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.095726,
+                    "duration_ms": 0.04865,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.148425,
+                    "duration_ms": 0.000544,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.14916,
+                    "duration_ms": 0.011994,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.161717,
+                    "duration_ms": 0.000296,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.162156,
+                    "duration_ms": 0.008308,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.170979,
+                    "duration_ms": 0.000172,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.171361,
+                    "duration_ms": 0.008117,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.180232,
+                    "duration_ms": 0.006569,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.18725,
+                    "duration_ms": 0.036648,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.224213,
+                    "duration_ms": 0.006131,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.23085,
+                    "duration_ms": 0.095649,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.043151,
+                    "duration_ms": 0.033067
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.077497,
+                    "duration_ms": 0.067748
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.247118,
+                    "duration_ms": 0.005063,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.253432,
+                    "duration_ms": 0.014456,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.269138,
+                    "duration_ms": 0.014242,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.284661,
+                    "duration_ms": 0.014456,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048217
+              },
+              {
+                "first_copy_to_sync_ms": 0.393933,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.025209,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.025476,
+                    "duration_ms": 0.006293,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.089052,
+                    "duration_ms": 0.001441,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.090942,
+                    "duration_ms": 0.037574,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.132069,
+                    "duration_ms": 0.000429,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.132632,
+                    "duration_ms": 0.011621,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.144883,
+                    "duration_ms": 0.000258,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.145265,
+                    "duration_ms": 0.008441,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.154202,
+                    "duration_ms": 0.00022,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.154546,
+                    "duration_ms": 0.008107,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.163427,
+                    "duration_ms": 0.00634,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.170015,
+                    "duration_ms": 0.017837,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.188091,
+                    "duration_ms": 0.005414,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.194278,
+                    "duration_ms": 0.199655,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.04339,
+                    "duration_ms": 0.02856
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.072704,
+                    "duration_ms": 0.05649
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.232846,
+                    "duration_ms": 0.004971,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.239434,
+                    "duration_ms": 0.014456,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.255231,
+                    "duration_ms": 0.014273,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.270816,
+                    "duration_ms": 0.014425,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048125
+              }
+            ]
+          },
+          "trace_sha256": "a8b8f65eb011fb05f7bba25d9e6cb1d7258b93787370bc5b7ca96e3c5588d502"
+        },
+        {
+          "repeat": 0,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-0-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-0-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "59387",
+              "--metrics-port",
+              "57643"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 82.435773,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.888161,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.110765,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 97,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 83007,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 599,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 85108,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 232,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 81999,
+              "recserve_gpu_first_batch_device_microseconds": 85077
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 80.309775,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.036771,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.037417,
+                    "duration_ms": 0.012894,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 4.033705,
+                    "duration_ms": 1.834773,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 5.871292,
+                    "duration_ms": 0.006523,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 17.473925,
+                    "duration_ms": 10.843782,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 28.325742,
+                    "duration_ms": 0.009974,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 40.052664,
+                    "duration_ms": 8.670638,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 48.731289,
+                    "duration_ms": 0.067037,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 59.570792,
+                    "duration_ms": 10.085673,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 69.662446,
+                    "duration_ms": 0.001084,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 78.924566,
+                    "duration_ms": 0.001911,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 78.926943,
+                    "duration_ms": 0.526307,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 79.467257,
+                    "duration_ms": 0.119392,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 79.587857,
+                    "duration_ms": 0.000551,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 79.591727,
+                    "duration_ms": 0.000513,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 79.592592,
+                    "duration_ms": 0.431605,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 80.02569,
+                    "duration_ms": 0.000552,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 80.027126,
+                    "duration_ms": 0.000485,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 80.027849,
+                    "duration_ms": 0.05072,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 80.07952,
+                    "duration_ms": 0.000285,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 80.080337,
+                    "duration_ms": 0.000133,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 80.080642,
+                    "duration_ms": 0.046602,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 80.128623,
+                    "duration_ms": 0.009927,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 80.139225,
+                    "duration_ms": 0.019199,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 80.158623,
+                    "duration_ms": 0.005344,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 80.164452,
+                    "duration_ms": 0.145323,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.15449,
+                    "duration_ms": 78.691076
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 78.884011,
+                    "duration_ms": 0.574174
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 79.472979,
+                    "duration_ms": 0.005194,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 80.072098,
+                    "duration_ms": 0.014426,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 80.153065,
+                    "duration_ms": 0.014183,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 80.236007,
+                    "duration_ms": 0.014365,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048168
+              },
+              {
+                "first_copy_to_sync_ms": 0.363417,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.024,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.024257,
+                    "duration_ms": 0.006152,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.095668,
+                    "duration_ms": 0.001103,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.097912,
+                    "duration_ms": 0.057985,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.16068,
+                    "duration_ms": 0.000437,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.161279,
+                    "duration_ms": 0.011914,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.173754,
+                    "duration_ms": 0.000352,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.174211,
+                    "duration_ms": 0.008691,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.183406,
+                    "duration_ms": 0.00019,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.18371,
+                    "duration_ms": 0.007788,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.19224,
+                    "duration_ms": 0.006523,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.199057,
+                    "duration_ms": 0.06466,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.264307,
+                    "duration_ms": 0.005315,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.27024,
+                    "duration_ms": 0.093177,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.043122,
+                    "duration_ms": 0.029877
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.073741,
+                    "duration_ms": 0.083211
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.252687,
+                    "duration_ms": 0.005042,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.259065,
+                    "duration_ms": 0.014365,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.274736,
+                    "duration_ms": 0.014214,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.290316,
+                    "duration_ms": 0.014396,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048017
+              },
+              {
+                "first_copy_to_sync_ms": 0.514816,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.031645,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.032168,
+                    "duration_ms": 0.012409,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.115988,
+                    "duration_ms": 0.001379,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.117861,
+                    "duration_ms": 0.044578,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.167602,
+                    "duration_ms": 0.000532,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.168391,
+                    "duration_ms": 0.017943,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.187618,
+                    "duration_ms": 0.000418,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.188274,
+                    "duration_ms": 0.014187,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.203374,
+                    "duration_ms": 0.000304,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.203887,
+                    "duration_ms": 0.01355,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.218721,
+                    "duration_ms": 0.013217,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.23249,
+                    "duration_ms": 0.083059,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.316681,
+                    "duration_ms": 0.016203,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.333702,
+                    "duration_ms": 0.181114,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.057585,
+                    "duration_ms": 0.040593
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.099338,
+                    "duration_ms": 0.064451
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.331946,
+                    "duration_ms": 0.004951,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.338172,
+                    "duration_ms": 0.014396,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.353904,
+                    "duration_ms": 0.014183,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.369363,
+                    "duration_ms": 0.014365,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047895
+              }
+            ]
+          },
+          "trace_sha256": "26d8c58811c400b3e3973c0c729e1dce72adf42ec4224b91ae3a08b5d43259ad"
+        },
+        {
+          "repeat": 1,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-1-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "39673",
+              "--metrics-port",
+              "36655"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 111.311468,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.952123,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.0815,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 97,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 112030,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 267,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 123076,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 95,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 110852,
+              "recserve_gpu_first_batch_device_microseconds": 122657
+            },
+            "status": "passed"
+          }
+        },
+        {
+          "repeat": 1,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-1-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-1-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "34533",
+              "--metrics-port",
+              "32833"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 102.707652,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 1.091835,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.938284,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 106,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 103310,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 533,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 105702,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 294,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 102196,
+              "recserve_gpu_first_batch_device_microseconds": 105615
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 100.255531,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.028777,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.029158,
+                    "duration_ms": 0.007402,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 3.943145,
+                    "duration_ms": 2.315459,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 6.261809,
+                    "duration_ms": 0.006953,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 19.306776,
+                    "duration_ms": 12.460599,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 31.773728,
+                    "duration_ms": 0.008794,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 44.622332,
+                    "duration_ms": 14.623857,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 59.254563,
+                    "duration_ms": 0.011074,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 75.918868,
+                    "duration_ms": 13.20074,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 89.126857,
+                    "duration_ms": 0.001011,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 98.628855,
+                    "duration_ms": 0.001698,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 98.630801,
+                    "duration_ms": 0.704016,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 99.347083,
+                    "duration_ms": 0.151371,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 99.499389,
+                    "duration_ms": 0.000515,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 99.50227,
+                    "duration_ms": 0.000295,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 99.50289,
+                    "duration_ms": 0.506813,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 100.011267,
+                    "duration_ms": 0.000591,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 100.01286,
+                    "duration_ms": 0.000219,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 100.013299,
+                    "duration_ms": 0.051124,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 100.065463,
+                    "duration_ms": 0.000315,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 100.066264,
+                    "duration_ms": 0.000115,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 100.066541,
+                    "duration_ms": 0.044229,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 100.112315,
+                    "duration_ms": 0.010177,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 100.123246,
+                    "duration_ms": 0.019734,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 100.143238,
+                    "duration_ms": 0.004635,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 100.148407,
+                    "duration_ms": 0.107124,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.133249,
+                    "duration_ms": 98.406261
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 98.585303,
+                    "duration_ms": 0.752623
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 99.367223,
+                    "duration_ms": 0.005392,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 100.034668,
+                    "duration_ms": 0.014409,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 100.126,
+                    "duration_ms": 0.014227,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 100.207919,
+                    "duration_ms": 0.01441,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048438
+              },
+              {
+                "first_copy_to_sync_ms": 0.549315,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.079968,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.080846,
+                    "duration_ms": 0.043017,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.1795,
+                    "duration_ms": 0.001173,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.180988,
+                    "duration_ms": 0.055922,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.241422,
+                    "duration_ms": 0.000562,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.242156,
+                    "duration_ms": 0.021118,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.264104,
+                    "duration_ms": 0.000295,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.264571,
+                    "duration_ms": 0.017913,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.28338,
+                    "duration_ms": 0.000267,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.283809,
+                    "duration_ms": 0.017007,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.301818,
+                    "duration_ms": 0.013735,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.316039,
+                    "duration_ms": 0.184002,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.500794,
+                    "duration_ms": 0.012667,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.544403,
+                    "duration_ms": 0.004912,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.135595,
+                    "duration_ms": 0.027384
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.163552,
+                    "duration_ms": 0.074417
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.323431,
+                    "duration_ms": 0.005118,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.329889,
+                    "duration_ms": 0.01441,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.345609,
+                    "duration_ms": 0.014257,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.361115,
+                    "duration_ms": 0.01441,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048195
+              },
+              {
+                "first_copy_to_sync_ms": 0.388253,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.028299,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.02869,
+                    "duration_ms": 0.005733,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.089353,
+                    "duration_ms": 0.001355,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.090956,
+                    "duration_ms": 0.036913,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.131875,
+                    "duration_ms": 0.000467,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.132504,
+                    "duration_ms": 0.011456,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.144542,
+                    "duration_ms": 0.000295,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.144961,
+                    "duration_ms": 0.008537,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.154128,
+                    "duration_ms": 0.000238,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.1545,
+                    "duration_ms": 0.007821,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.163141,
+                    "duration_ms": 0.006791,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.170238,
+                    "duration_ms": 0.019286,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.189791,
+                    "duration_ms": 0.005503,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.195781,
+                    "duration_ms": 0.192472,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.046031,
+                    "duration_ms": 0.026631
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.073406,
+                    "duration_ms": 0.055235
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.24002,
+                    "duration_ms": 0.005026,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.246539,
+                    "duration_ms": 0.01441,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.262289,
+                    "duration_ms": 0.014258,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.277796,
+                    "duration_ms": 0.014409,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048103
+              }
+            ]
+          },
+          "trace_sha256": "722581e208b008d8424423320a151abe17e704c32819c851503af5a5f47db2de"
+        },
+        {
+          "repeat": 2,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-1/repeat-2-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "33125",
+              "--metrics-port",
+              "43245"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 84.037952,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.801951,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.841153,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 102,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 84062,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 98,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 87883,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 87,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 83433,
+              "recserve_gpu_first_batch_device_microseconds": 87577
+            },
+            "status": "passed"
+          }
+        }
+      ],
+      "status": "passed",
+      "finished_utc": "2026-10-02T20:01:20.524439+00:00"
+    },
+    {
+      "started_utc": "2026-10-02T20:04:04.013171+00:00",
+      "source": {
+        "commit": "07a2edbaa46316c9ac48eee11d97ed545a02bda5",
+        "source_sha256": "173e8d136946b8a55dd4be20d2e6cea5183e6e4fa5bda7808b36bb10dd4ef455"
+      },
+      "binary_sha256": "40fae3d0cc72f24cd37ae46891fbe403b666433f04b5a44ec69c803ab02d4e26",
+      "manifest_sha256": "3ced3dfa5d233603e165a0d4d35ee3bbb58c4407ba09d35528c3d79d7fe5428c",
+      "script_sha256": "c037aefcb0b92118d43cdaf4c4f041e828fb34b449a09346c4e3ab408591243e",
+      "nsys_version": "NVIDIA Nsight Systems version 2026.1.3.425-261338342291v0",
+      "device": "NVIDIA GeForce RTX 3060, 591.86",
+      "scope": "RSV1 single-query CUDA diagnostic; not the CPU-only RSV2 pilot, capacity, or sanitizer qualification.",
+      "design": "Three sequential requests per fresh process: cold, 50ms gap, configured idle gap. Interleaved trace/control.",
+      "caveats": [
+        "CUDA tracing changes timings; controls have no profiler.",
+        "Device kernel sums, host APIs and library ranges overlap and must not be added.",
+        "CPU sampling and context-switch tracing disabled; no OS/debugger policy changes.",
+        "Three requests do not establish tail latency or behavior after long idle periods."
+      ],
+      "rows": [
+        {
+          "repeat": 0,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-0-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "56231",
+              "--metrics-port",
+              "59321"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 92.661957,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.864993,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.956367,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 115,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 92847,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 94,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 97246,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 151,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 92141,
+              "recserve_gpu_first_batch_device_microseconds": 96930
+            },
+            "status": "passed"
+          }
+        },
+        {
+          "repeat": 2,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-2-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-2-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "33251",
+              "--metrics-port",
+              "41855"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 110.88913,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.880781,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.932827,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 128,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 111051,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 648,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 112824,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 92,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 110231,
+              "recserve_gpu_first_batch_device_microseconds": 112933
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 106.574671,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.038612,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.039238,
+                    "duration_ms": 0.010327,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 4.883815,
+                    "duration_ms": 2.557174,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 7.445213,
+                    "duration_ms": 0.00915,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 24.709605,
+                    "duration_ms": 18.035219,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 42.753044,
+                    "duration_ms": 0.010498,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 56.549388,
+                    "duration_ms": 13.925965,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 70.488765,
+                    "duration_ms": 0.014342,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 87.109812,
+                    "duration_ms": 9.765219,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 96.880184,
+                    "duration_ms": 0.000826,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 105.193421,
+                    "duration_ms": 0.000968,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 105.194674,
+                    "duration_ms": 0.378903,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 105.58415,
+                    "duration_ms": 0.13441,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 105.7195,
+                    "duration_ms": 0.000598,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 105.722309,
+                    "duration_ms": 0.000333,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 105.72304,
+                    "duration_ms": 0.526564,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 106.250914,
+                    "duration_ms": 0.000636,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 106.252394,
+                    "duration_ms": 0.000304,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 106.252935,
+                    "duration_ms": 0.066498,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 106.320601,
+                    "duration_ms": 0.000436,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 106.321711,
+                    "duration_ms": 0.000143,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 106.322063,
+                    "duration_ms": 0.047344,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 106.370688,
+                    "duration_ms": 0.009093,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 106.380493,
+                    "duration_ms": 0.02071,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 106.401422,
+                    "duration_ms": 0.005191,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 106.407088,
+                    "duration_ms": 0.167583,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.171313,
+                    "duration_ms": 104.961276
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 105.162535,
+                    "duration_ms": 0.413718
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 105.596008,
+                    "duration_ms": 0.005638,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 106.274526,
+                    "duration_ms": 0.01443,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 106.387845,
+                    "duration_ms": 0.014187,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 106.513744,
+                    "duration_ms": 0.014339,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048594
+              },
+              {
+                "first_copy_to_sync_ms": 0.313241,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.025694,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.026045,
+                    "duration_ms": 0.007052,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.093815,
+                    "duration_ms": 0.001528,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.095628,
+                    "duration_ms": 0.052982,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.153745,
+                    "duration_ms": 0.000683,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.154627,
+                    "duration_ms": 0.013213,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.168362,
+                    "duration_ms": 0.000275,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.168798,
+                    "duration_ms": 0.009663,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.178916,
+                    "duration_ms": 0.0002,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.179249,
+                    "duration_ms": 0.009263,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.189613,
+                    "duration_ms": 0.00784,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.197833,
+                    "duration_ms": 0.022837,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.220945,
+                    "duration_ms": 0.006378,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.227864,
+                    "duration_ms": 0.085377,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.044668,
+                    "duration_ms": 0.031284
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.076806,
+                    "duration_ms": 0.073237
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.240054,
+                    "duration_ms": 0.005093,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.24642,
+                    "duration_ms": 0.014369,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.262153,
+                    "duration_ms": 0.014158,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.277584,
+                    "duration_ms": 0.014339,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047959
+              },
+              {
+                "first_copy_to_sync_ms": 0.335631,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.030885,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.031255,
+                    "duration_ms": 0.006113,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.113471,
+                    "duration_ms": 0.002117,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.116158,
+                    "duration_ms": 0.048596,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.169491,
+                    "duration_ms": 0.000674,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.170326,
+                    "duration_ms": 0.015367,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.186272,
+                    "duration_ms": 0.000294,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.186737,
+                    "duration_ms": 0.010384,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.197614,
+                    "duration_ms": 0.000237,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.197984,
+                    "duration_ms": 0.010185,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.209061,
+                    "duration_ms": 0.007935,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.21749,
+                    "duration_ms": 0.023709,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.241513,
+                    "duration_ms": 0.006293,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.248356,
+                    "duration_ms": 0.087275,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.055155,
+                    "duration_ms": 0.037587
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.093577,
+                    "duration_ms": 0.071984
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.256443,
+                    "duration_ms": 0.005032,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.263021,
+                    "duration_ms": 0.0144,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.278755,
+                    "duration_ms": 0.014188,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.294277,
+                    "duration_ms": 0.014369,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047989
+              }
+            ]
+          },
+          "trace_sha256": "1aa78163e864915b925eb1ae77d565e1303e5b5c87db9f04897ab854e918f941"
+        },
+        {
+          "repeat": 0,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-0-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-0-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "47789",
+              "--metrics-port",
+              "33195"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 121.403912,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.776174,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 0.837606,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 222,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 121375,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 517,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 124612,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 91,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 120597,
+              "recserve_gpu_first_batch_device_microseconds": 124618
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 116.6401,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.04299,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.043921,
+                    "duration_ms": 0.01148,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 3.327632,
+                    "duration_ms": 1.555734,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 4.889535,
+                    "duration_ms": 0.010757,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 15.345631,
+                    "duration_ms": 9.980639,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 25.333238,
+                    "duration_ms": 0.008904,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 36.299093,
+                    "duration_ms": 7.027999,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 43.333317,
+                    "duration_ms": 0.008246,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 53.469396,
+                    "duration_ms": 7.300353,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 60.779669,
+                    "duration_ms": 0.001778,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 114.451589,
+                    "duration_ms": 0.001664,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 114.45377,
+                    "duration_ms": 0.583769,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 115.048982,
+                    "duration_ms": 0.243328,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 115.293796,
+                    "duration_ms": 0.000611,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 115.297331,
+                    "duration_ms": 0.000357,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 115.298111,
+                    "duration_ms": 1.007265,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 116.30737,
+                    "duration_ms": 0.000601,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 116.309203,
+                    "duration_ms": 0.00031,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 116.309833,
+                    "duration_ms": 0.114339,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 116.426024,
+                    "duration_ms": 0.000612,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 116.427679,
+                    "duration_ms": 0.000226,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 116.428422,
+                    "duration_ms": 0.096568,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 116.527435,
+                    "duration_ms": 0.013925,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 116.542206,
+                    "duration_ms": 0.028322,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 116.571064,
+                    "duration_ms": 0.007221,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 116.57885,
+                    "duration_ms": 0.06125,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.177611,
+                    "duration_ms": 114.205271
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 114.412163,
+                    "duration_ms": 0.627849
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 115.060625,
+                    "duration_ms": 0.005135,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 116.34429,
+                    "duration_ms": 0.014235,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 116.470485,
+                    "duration_ms": 0.014055,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 116.583857,
+                    "duration_ms": 0.014175,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.0476
+              },
+              {
+                "first_copy_to_sync_ms": 0.32376,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.025802,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.026338,
+                    "duration_ms": 0.009563,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.098458,
+                    "duration_ms": 0.001241,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.099962,
+                    "duration_ms": 0.050635,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.155834,
+                    "duration_ms": 0.000452,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.156474,
+                    "duration_ms": 0.014405,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.171744,
+                    "duration_ms": 0.000282,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.172271,
+                    "duration_ms": 0.012045,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.185247,
+                    "duration_ms": 0.000291,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.185745,
+                    "duration_ms": 0.013089,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.199821,
+                    "duration_ms": 0.008792,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.209026,
+                    "duration_ms": 0.024467,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.233953,
+                    "duration_ms": 0.008012,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.242538,
+                    "duration_ms": 0.081222,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.048171,
+                    "duration_ms": 0.032553
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.081956,
+                    "duration_ms": 0.06975
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.248203,
+                    "duration_ms": 0.004956,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.25451,
+                    "duration_ms": 0.014235,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.270157,
+                    "duration_ms": 0.014055,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.285503,
+                    "duration_ms": 0.014206,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047452
+              },
+              {
+                "first_copy_to_sync_ms": 0.291197,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.024757,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.025049,
+                    "duration_ms": 0.006525,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.088048,
+                    "duration_ms": 0.001467,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.089929,
+                    "duration_ms": 0.037781,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.132214,
+                    "duration_ms": 0.000545,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.132909,
+                    "duration_ms": 0.012168,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.145566,
+                    "duration_ms": 0.00015,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.145866,
+                    "duration_ms": 0.008886,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.155204,
+                    "duration_ms": 0.000206,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.155523,
+                    "duration_ms": 0.007899,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.164268,
+                    "duration_ms": 0.006638,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.171179,
+                    "duration_ms": 0.019323,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.190709,
+                    "duration_ms": 0.005519,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.196689,
+                    "duration_ms": 0.094508,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.043723,
+                    "duration_ms": 0.02725
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.071744,
+                    "duration_ms": 0.057179
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.222599,
+                    "duration_ms": 0.005016,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.229146,
+                    "duration_ms": 0.014235,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.244733,
+                    "duration_ms": 0.014025,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.260079,
+                    "duration_ms": 0.014206,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047482
+              }
+            ]
+          },
+          "trace_sha256": "8f357acc3e8e2eb8ea002e78104013a71e77712b3c7776863aee152bf86b210c"
+        },
+        {
+          "repeat": 1,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-1-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "53517",
+              "--metrics-port",
+              "60445"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 61.150844,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 0.818773,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.584006,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 141,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 61713,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 156,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 65117,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 153,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 60705,
+              "recserve_gpu_first_batch_device_microseconds": 64616
+            },
+            "status": "passed"
+          }
+        },
+        {
+          "repeat": 1,
+          "traced": true,
+          "command": [
+            "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+            "profile",
+            "--trace=cuda,cublas",
+            "--sample=none",
+            "--cpuctxsw=none",
+            "--stats=true",
+            "--output=/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-1-trace",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-1-trace.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "58477",
+              "--metrics-port",
+              "57211"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 153.527319,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 5.029306,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.276318,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 109,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 154366,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 954,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 159389,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 171,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 152933,
+              "recserve_gpu_first_batch_device_microseconds": 159330
+            },
+            "status": "passed"
+          },
+          "timeline": {
+            "runtime_events": 1023,
+            "kernel_events": 12,
+            "episodes": [
+              {
+                "first_copy_to_sync_ms": 150.380039,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.059624,
+                    "correlation_id": 1312
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.061106,
+                    "duration_ms": 0.015742,
+                    "correlation_id": 1313
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 4.913027,
+                    "duration_ms": 1.454505,
+                    "correlation_id": 1314
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 6.371275,
+                    "duration_ms": 0.006973,
+                    "correlation_id": 1315
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 35.417365,
+                    "duration_ms": 21.181935,
+                    "correlation_id": 1317
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 56.608116,
+                    "duration_ms": 0.00894,
+                    "correlation_id": 1318
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 75.531207,
+                    "duration_ms": 11.718927,
+                    "correlation_id": 1320
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 87.259368,
+                    "duration_ms": 0.010963,
+                    "correlation_id": 1321
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 105.847986,
+                    "duration_ms": 27.118689,
+                    "correlation_id": 1323
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 132.975235,
+                    "duration_ms": 0.001169,
+                    "correlation_id": 1324
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 148.810049,
+                    "duration_ms": 0.002166,
+                    "correlation_id": 1404
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 148.812633,
+                    "duration_ms": 0.507126,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "cuLibraryLoadData",
+                    "offset_ms": 149.345238,
+                    "duration_ms": 0.159634,
+                    "correlation_id": 1407
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 149.506154,
+                    "duration_ms": 0.000884,
+                    "correlation_id": 1408
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 149.510534,
+                    "duration_ms": 0.00038,
+                    "correlation_id": 1409
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 149.511494,
+                    "duration_ms": 0.577342,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 150.090565,
+                    "duration_ms": 0.000903,
+                    "correlation_id": 1411
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 150.09257,
+                    "duration_ms": 0.000247,
+                    "correlation_id": 1412
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 150.093111,
+                    "duration_ms": 0.06237,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "cuLibraryGetKernel",
+                    "offset_ms": 150.156469,
+                    "duration_ms": 0.000437,
+                    "correlation_id": 1414
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 150.157628,
+                    "duration_ms": 0.00018,
+                    "correlation_id": 1415
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 150.158112,
+                    "duration_ms": 0.069581,
+                    "correlation_id": 1416
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 150.229621,
+                    "duration_ms": 0.01389,
+                    "correlation_id": 1418
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 150.24448,
+                    "duration_ms": 0.027665,
+                    "correlation_id": 1419
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 150.272458,
+                    "duration_ms": 0.006042,
+                    "correlation_id": 1420
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 150.279099,
+                    "duration_ms": 0.10094,
+                    "correlation_id": 1421
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.217908,
+                    "duration_ms": 148.517117
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 148.764419,
+                    "duration_ms": 0.558209
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 149.344491,
+                    "duration_ms": 0.005401,
+                    "correlation_id": 1405
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 150.103981,
+                    "duration_ms": 0.014353,
+                    "correlation_id": 1410
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 150.227721,
+                    "duration_ms": 0.01417,
+                    "correlation_id": 1413
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 150.324212,
+                    "duration_ms": 0.014322,
+                    "correlation_id": 1416
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.048246
+              },
+              {
+                "first_copy_to_sync_ms": 0.689309,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.07016,
+                    "correlation_id": 1427
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.07149,
+                    "duration_ms": 0.02377,
+                    "correlation_id": 1428
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.166455,
+                    "duration_ms": 0.001748,
+                    "correlation_id": 1430
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.179385,
+                    "duration_ms": 0.061296,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.247844,
+                    "duration_ms": 0.000741,
+                    "correlation_id": 1433
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.248946,
+                    "duration_ms": 0.070547,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.322733,
+                    "duration_ms": 0.00057,
+                    "correlation_id": 1435
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.323731,
+                    "duration_ms": 0.20831,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.534596,
+                    "duration_ms": 0.000561,
+                    "correlation_id": 1437
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.535594,
+                    "duration_ms": 0.025024,
+                    "correlation_id": 1438
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.5621,
+                    "duration_ms": 0.010982,
+                    "correlation_id": 1440
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.573747,
+                    "duration_ms": 0.042713,
+                    "correlation_id": 1441
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.617325,
+                    "duration_ms": 0.008208,
+                    "correlation_id": 1442
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.626398,
+                    "duration_ms": 0.062911,
+                    "correlation_id": 1443
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.107895,
+                    "duration_ms": 0.038296
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.147179,
+                    "duration_ms": 0.095582
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.34302,
+                    "duration_ms": 0.004795,
+                    "correlation_id": 1431
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.349362,
+                    "duration_ms": 0.014352,
+                    "correlation_id": 1434
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.432836,
+                    "duration_ms": 0.01417,
+                    "correlation_id": 1436
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.592441,
+                    "duration_ms": 0.014353,
+                    "correlation_id": 1438
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.04767
+              },
+              {
+                "first_copy_to_sync_ms": 0.536121,
+                "runtime_calls": [
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0,
+                    "duration_ms": 0.042666,
+                    "correlation_id": 1449
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.043711,
+                    "duration_ms": 0.013025,
+                    "correlation_id": 1450
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.14316,
+                    "duration_ms": 0.001947,
+                    "correlation_id": 1452
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.14581,
+                    "duration_ms": 0.061106,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.213072,
+                    "duration_ms": 0.000761,
+                    "correlation_id": 1455
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.214023,
+                    "duration_ms": 0.013851,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.22833,
+                    "duration_ms": 0.000285,
+                    "correlation_id": 1457
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.228738,
+                    "duration_ms": 0.009577,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "cuKernelGetName",
+                    "offset_ms": 0.23898,
+                    "duration_ms": 0.000285,
+                    "correlation_id": 1459
+                  },
+                  {
+                    "name": "cudaLaunchKernel_v7000",
+                    "offset_ms": 0.239464,
+                    "duration_ms": 0.011819,
+                    "correlation_id": 1460
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.252318,
+                    "duration_ms": 0.007942,
+                    "correlation_id": 1462
+                  },
+                  {
+                    "name": "cudaMemcpyAsync_v3020",
+                    "offset_ms": 0.260849,
+                    "duration_ms": 0.020151,
+                    "correlation_id": 1463
+                  },
+                  {
+                    "name": "cudaEventRecord_v3020",
+                    "offset_ms": 0.281218,
+                    "duration_ms": 0.004959,
+                    "correlation_id": 1464
+                  },
+                  {
+                    "name": "cudaStreamSynchronize_v3020",
+                    "offset_ms": 0.286814,
+                    "duration_ms": 0.249307,
+                    "correlation_id": 1465
+                  }
+                ],
+                "library_ranges": [
+                  {
+                    "name": "cublasLtSSSMatmulAlgoGetHeuristic",
+                    "offset_ms": 0.078111,
+                    "duration_ms": 0.037365
+                  },
+                  {
+                    "name": "cublasLtSSSMatmul",
+                    "offset_ms": 0.116283,
+                    "duration_ms": 0.092277
+                  }
+                ],
+                "kernels": [
+                  {
+                    "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, float, float, float, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<const float>, cublasGemvTensorStridedBatched<float>, float>>(T13)",
+                    "offset_ms": 0.430006,
+                    "duration_ms": 0.005007,
+                    "correlation_id": 1453
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)1>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.43653,
+                    "duration_ms": 0.014352,
+                    "correlation_id": 1456
+                  },
+                  {
+                    "name": "void recserve::<unnamed>::select_chunks<(bool)0>(const float *, const unsigned long long *, unsigned long long *, int, int, int, int)",
+                    "offset_ms": 0.452247,
+                    "duration_ms": 0.014171,
+                    "correlation_id": 1458
+                  },
+                  {
+                    "name": "recserve::<unnamed>::merge_topk(const unsigned long long *, unsigned long long *, int, bool)",
+                    "offset_ms": 0.467692,
+                    "duration_ms": 0.014352,
+                    "correlation_id": 1460
+                  }
+                ],
+                "kernel_duration_sum_ms": 0.047882
+              }
+            ]
+          },
+          "trace_sha256": "88bddc18316c2852254ceed80c7af8b3e9ecdfa9d3697d7abeef94a902018d67"
+        },
+        {
+          "repeat": 2,
+          "traced": false,
+          "command": [
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+            "/mnt/c/Users/samis/Desktop/1. recserve/scripts/profile_gpu.py",
+            "--workload",
+            "--binary",
+            "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+            "--manifest",
+            "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_bundle.json",
+            "--idle-seconds",
+            "2",
+            "--output",
+            "/mnt/c/Users/samis/Desktop/1. recserve/.cache/nsight/campaign-2/repeat-2-control.json"
+          ],
+          "workload": {
+            "command": [
+              "/mnt/c/Users/samis/Desktop/1. recserve/build-gpu/recserve_server",
+              "--catalog",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_catalog.bin",
+              "--queries",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_queries.bin",
+              "--index",
+              "/mnt/c/Users/samis/Desktop/1. recserve/data/wsl_small_index.bin",
+              "--backend",
+              "cuda",
+              "--batch",
+              "1",
+              "--batch-wait-us",
+              "0",
+              "--port",
+              "57031",
+              "--metrics-port",
+              "49417"
+            ],
+            "requests": [
+              {
+                "number": 0,
+                "idle_before_s": 0,
+                "client_ms": 201.64035,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 1,
+                "idle_before_s": 0.05,
+                "client_ms": 4.191175,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              },
+              {
+                "number": 2,
+                "idle_before_s": 2,
+                "client_ms": 1.01446,
+                "item_ids": [
+                  1478,
+                  943,
+                  1226,
+                  1095,
+                  2033,
+                  1712,
+                  2032,
+                  1009,
+                  2196,
+                  2342
+                ]
+              }
+            ],
+            "gpu_metrics": {
+              "recserve_gpu_batches_total": 3,
+              "recserve_gpu_queries_total": 3,
+              "recserve_gpu_fallback_total": 0,
+              "recserve_gpu_healthy": 1,
+              "recserve_gpu_batch_max": 1,
+              "recserve_gpu_queue_microseconds_count": 3,
+              "recserve_gpu_queue_microseconds_sum": 5526,
+              "recserve_gpu_wall_microseconds_count": 3,
+              "recserve_gpu_wall_microseconds_sum": 191966,
+              "recserve_gpu_h2d_microseconds_count": 3,
+              "recserve_gpu_h2d_microseconds_sum": 119,
+              "recserve_gpu_device_compute_microseconds_count": 3,
+              "recserve_gpu_device_compute_microseconds_sum": 197564,
+              "recserve_gpu_d2h_microseconds_count": 3,
+              "recserve_gpu_d2h_microseconds_sum": 105,
+              "recserve_gpu_expired_total": 0,
+              "recserve_gpu_shed_total": 0,
+              "recserve_gpu_first_batch_wall_microseconds": 191118,
+              "recserve_gpu_first_batch_device_microseconds": 197156
+            },
+            "status": "passed"
+          }
+        }
+      ],
+      "status": "passed",
+      "finished_utc": "2026-10-02T20:04:44.523720+00:00"
+    }
+  ],
+  "tool": {
+    "path": "/tmp/recserve-nsight-ifo5oy_p/opt/nvidia/nsight-systems/2026.1.3/bin/nsys",
+    "package_sha256": "c7309f1c9850f66a9eb95e7215883b8e8e439df6f65ea0cecd81e6b0181a4e83",
+    "version": "NVIDIA Nsight Systems version 2026.1.3.425-261338342291v0",
+    "scope": "Temporary extraction; no system installation or settings changed."
+  },
+  "validation": {
+    "cuda_ctest": {
+      "command": [
+        "ctest",
+        "--test-dir",
+        "build-gpu",
+        "--output-on-failure"
+      ],
+      "started_utc": "2026-10-02T19:54:31.707069+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/gpu-profile-functional.log",
+      "exit_code": 0,
+      "elapsed_s": 10.49
+    },
+    "python_regressions": {
+      "command": [
+        ".cache/venv-production/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "started_utc": "2026-10-02T20:04:17.534405+00:00",
+      "status": "completed",
+      "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/gpu-trace-python-regressions.log",
+      "exit_code": 0,
+      "elapsed_s": 3.6
+    }
+  }
+}

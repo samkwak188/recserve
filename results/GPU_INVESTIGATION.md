@@ -46,3 +46,11 @@ Next: profile first-call host/runtime operations, test readiness warmup as an ex
 policy under idle gaps and restarts, perform longer burst/soak tests, then compare
 quality-matched optimized multicore/GEMM baselines on realistic larger catalogs.
 Compute Sanitizer remains a separate unpassed approval gate.
+
+## Follow-up timeline
+
+The original measurements above retain their checkpoint. The 2026-10-02
+[Nsight follow-up](GPU_FIRST_CALL.md) locates the first-call delay within a
+cuBLAS heuristic range containing library loads, before device kernels execute.
+It preserves separate untraced controls and does not close the warmup, capacity
+or Compute Sanitizer gates.

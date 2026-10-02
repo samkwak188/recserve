@@ -1,5 +1,16 @@
 # Agent handoff
 
+## GPU diagnosis continuation: 2026-10-02
+
+Read results/GPU_FIRST_CALL.md and its source-bound JSON. Six fresh processes per
+campaign (three traced, three controls) locate first-call delay in a cuBLAS
+heuristic range with library loads. Nsight capture works without debugger changes.
+Use a profiler installation path without spaces; LD_PRELOAD otherwise warns.
+Raw timelines live in .cache/nsight, with hashes and extracted events retained
+in results/. Next is an explicit GPU-worker readiness warmup experiment across
+shapes, restarts and longer idle gaps. No startup policy changed yet. Keep CPU
+default and the separate unpassed Compute Sanitizer gate.
+
 ## Monitoring continuation: 2026-10-02
 
 The monitoring stage executes pinned Prometheus/Alertmanager/Blackbox containers,
@@ -10,6 +21,8 @@ the injected fault and match alert activation time; historical startup alerts
 must never satisfy a later outage. Caddy uses a selected fixed test host port so
 restart preserves APP_ORIGIN. The receiver is local, not external notification
 evidence. Cloud account/domain/alert destination remain unresolved owner inputs.
+07a2edb repairs Linux permissions on the copied public test CA; all 20 hosted
+jobs passed (37057564356 and 37057564318).
 
 
 ## Dependency recovery checkpoint: 2026-10-02
