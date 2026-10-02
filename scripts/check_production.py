@@ -23,7 +23,7 @@ def main():
             '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_DB=recserve_test',
             '-p', '127.0.0.1::5432', '--tmpfs', '/var/lib/postgresql/data', image], env=env, check=True)
         for _ in range(60):
-            if subprocess.run(['docker', 'exec', name, 'pg_isready', '-U', 'postgres'],
+            if subprocess.run(['docker', 'exec', name, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
                 break
             time.sleep(0.5)

@@ -43,7 +43,7 @@ services:
     volumes: [postgres_data:/var/lib/postgresql/data]
     command: [postgres, -c, shared_buffers=128MB, -c, max_connections=40, -c, work_mem=4MB, -c, wal_level=replica, -c, archive_mode=on, -c, archive_timeout=60s, -c, "archive_command=pgbackrest --config=/run/secrets/pgbackrest_config --stanza=recserve archive-push %p"]
     healthcheck:
-      test: [CMD-SHELL, pg_isready -U recserve_owner -d recserve]
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U recserve_owner -d recserve]
       interval: 5s
       timeout: 3s
       retries: 12

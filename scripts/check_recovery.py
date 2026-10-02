@@ -41,7 +41,7 @@ def main():
 
     def wait(container):
         for _ in range(120):
-            result = subprocess.run(['docker', 'exec', container, 'pg_isready', '-U', 'recserve_owner', '-d', 'recserve'],
+            result = subprocess.run(['docker', 'exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'recserve_owner', '-d', 'recserve'],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if result.returncode == 0:
                 return
@@ -49,6 +49,9 @@ def main():
         raise RuntimeError('PostgreSQL readiness timeout')
 
     with tempfile.TemporaryDirectory(prefix='secrets-', dir=directory) as temp:
+        init_pause = Path(temp) / 'init-pause.sh'
+        init_pause.write_text("#!/bin/bash\ntouch /tmp/recserve-init-paused\nfor attempt in $(seq 1 300); do\n    if test -f /tmp/recserve-init-release; then break; fi\n    sleep 0.1\ndone\ntest -f /tmp/recserve-init-release\n")
+        init_pause.chmod(0o644)
         config = Path(temp) / 'pgbackrest.conf'
         config.write_text('[global]\nrepo1-type=posix\nrepo1-path=/var/lib/pgbackrest\n'
             'repo1-cipher-type=aes-256-cbc\nrepo1-cipher-pass=' + secrets.token_urlsafe(32) + '\n'
@@ -64,12 +67,26 @@ def main():
             for volume in volumes:
                 run(['docker', 'volume', 'create', '--label', 'recserve.proof=' + token, volume])
             containers.append(primary)
-            run(['docker', 'run', '-d', '--name', primary, *common, '-e', 'POSTGRES_PASSWORD',
+            run(['docker', 'run', '-d', '--name', primary, *common,
+                '--mount', f'type=bind,source={init_pause},target=/docker-entrypoint-initdb.d/pause.sh,readonly',
+                '-e', 'POSTGRES_PASSWORD',
                 '-e', 'POSTGRES_USER=recserve_owner', '-e', 'POSTGRES_DB=recserve',
                 '--mount', f'type=volume,source={volumes[0]},target=/var/lib/postgresql/data',
                 '--mount', f'type=volume,source={volumes[1]},target=/var/lib/pgbackrest', image,
                 'postgres', '-c', 'archive_mode=on', '-c', 'archive_timeout=60', '-c',
                 'archive_command=pgbackrest --stanza=recserve archive-push %p'], env=env)
+            # Prove the socket-only initialization server cannot satisfy readiness.
+            for _ in range(120):
+                if subprocess.run(['docker', 'exec', primary, 'test', '-f', '/tmp/recserve-init-paused'],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                    break
+                time.sleep(.1)
+            else:
+                raise RuntimeError('Initialization pause was not reached')
+            ready_command = ['docker', 'exec', primary, 'pg_isready', '-U', 'recserve_owner', '-d', 'recserve']
+            assert subprocess.run(ready_command, stdout=subprocess.DEVNULL).returncode == 0
+            assert subprocess.run([*ready_command, '-h', '127.0.0.1'], stdout=subprocess.DEVNULL).returncode != 0
+            run(['docker', 'exec', primary, 'touch', '/tmp/recserve-init-release'])
             wait(primary)
             sql(primary, 'CREATE TABLE proof_events (id integer PRIMARY KEY, created_at timestamptz DEFAULT clock_timestamp()); INSERT INTO proof_events(id) VALUES (1);')
             run(['docker', 'exec', primary, 'pgbackrest', '--stanza=recserve', 'stanza-create'])
@@ -100,6 +117,7 @@ def main():
                 raise RuntimeError('Restored server is not writable')
             restored_s = time.monotonic() - recovery_start
             report = dict(source=source_identity(ROOT), image=image, scope='local encrypted repository; not off-host/cloud evidence',
+                initialization_server_rejected=True,
                 records_recovered=2, wrong_encryption_key_rejected=True, archive_confirmation_s=archived_after_s,
                 restore_s=restored_s, elapsed_s=time.monotonic() - started, off_host=False,
                 postgres_version=sql(restored, 'SHOW server_version;'))

@@ -1,0 +1,36 @@
+{
+  "source": {
+    "commit": "ec5f644e23a82e33a41b33b8c9f046d49bdd9ea1",
+    "source_sha256": "8fe7f8ed23c8036bd88d0a6200b9d9cb41de66ae5bc89d369454505966bb3616"
+  },
+  "image": "sha256:dec7033be428f0800935033369bb1f0542768205870b2ed292629aa0a8fdea2b",
+  "scope": "local encrypted repository; not off-host/cloud evidence",
+  "initialization_server_rejected": true,
+  "records_recovered": 2,
+  "wrong_encryption_key_rejected": true,
+  "archive_confirmation_s": 0.2389875020001,
+  "restore_s": 3.7421205979999286,
+  "elapsed_s": 14.49447631399994,
+  "off_host": false,
+  "postgres_version": "17.11 (Debian 17.11-1.pgdg12+2)",
+  "runner": {
+    "command": [
+      ".cache/venv-production/bin/python",
+      "scripts/check_recovery.py",
+      "--images",
+      ".cache/production/images/1790967653332766617/images.json"
+    ],
+    "started_utc": "2026-10-02T19:03:10.915891+00:00",
+    "status": "completed",
+    "log": "/mnt/c/Users/samis/Desktop/1. recserve/.cache/logs/recovery-initialization.log",
+    "exit_code": 0,
+    "elapsed_s": 15.35
+  },
+  "code_sha256": {
+    "scripts/check_recovery.py": "94a444a1cc99423d6cb39afbc896fd92f080148c4c152227399542eeffb85af4",
+    "scripts/check_operations.py": "ab5c51d20349509645d3c368780b7a2501e795ba981134cdc3209c464480c61d",
+    "scripts/check_production.py": "fc620ff60e263f9d87259645c8e6023b9ef864fb236d9f21cabace693b71309e",
+    "compose.production.yml": "035d8e908c4b10938a6ff0f20482342e70c85d1327ee464342ac14027b95c850"
+  },
+  "hosted_failure": "https://github.com/samkwak188/recserve/actions/runs/37050889592"
+}

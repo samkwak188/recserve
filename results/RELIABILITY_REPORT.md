@@ -67,3 +67,20 @@ do not impose a universal DNS wall-clock bound. Cloud DNS, off-host restore,
 alert delivery, long-duration load, live identity-provider configuration and
 owner-led pilot use remain unqualified. CPU remains the default and the GPU
 sanitizer gate remains unpassed.
+
+## Hosted startup-race follow-up
+
+At ec5f644, all 16 core jobs plus PostgreSQL/API and browser checks passed.
+The hosted container job passed the new HTTPS recovery checks, then exposed an
+older backup startup race: the default socket pg_isready probe accepted the
+temporary initialization server before the application database existed.
+All three test launchers and the Compose database health check now probe
+127.0.0.1 explicitly, waiting for the final TCP listener.
+
+The restore drill now deliberately pauses initialization. It asserts that the
+old socket probe succeeds while the TCP probe fails, releases the pause, and
+then completes encrypted backup, WAL recovery and wrong-key rejection.
+This deterministic regression passed locally (runner exit 0), as did the full
+operations stage with TCP readiness. [Separate follow-up evidence](readiness-regression.json)
+preserves that run's source hashes. Earlier timing measurements above retain
+their original source identity; the startup harness changes do not relabel them.

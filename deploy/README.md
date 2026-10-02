@@ -175,3 +175,9 @@ effect. The container drill requires an HTTP 503 before that proxy deadline and
 verifies the account was not removed when the ledger was unreachable. Socket
 timeouts are not a universal wall-clock bound on DNS resolution; deployed DNS
 failure behavior still needs qualification.
+
+PostgreSQL startup checks explicitly use pg_isready -h 127.0.0.1. The default
+Unix-socket probe can accept the image entrypoint's temporary initialization
+server before the application database exists. TCP readiness excludes that
+phase; migrations and API readiness still verify schema and service behavior.
+The restore drill pauses initialization to exercise this distinction directly.

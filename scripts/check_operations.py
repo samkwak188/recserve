@@ -104,7 +104,7 @@ def main():
                 *bind(fixture / 'postgres_password', '/run/secrets/postgres_password'),
                 '--mount', f'type=volume,source={data},target=/var/lib/postgresql/data',
                 *envargs(dict(POSTGRES_PASSWORD_FILE='/run/secrets/postgres_password', POSTGRES_USER='recserve_owner', POSTGRES_DB='recserve'))])
-            wait(['docker', 'exec', pg, 'pg_isready', '-U', 'recserve_owner', '-d', 'recserve'])
+            wait(['docker', 'exec', pg, 'pg_isready', '-h', '127.0.0.1', '-U', 'recserve_owner', '-d', 'recserve'])
             migration = prefix + '-migration'
             containers.append(migration)
             run(['docker', 'run', '--name', migration, '--network', network, '--label', 'recserve.proof=' + token,
