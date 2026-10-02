@@ -96,7 +96,8 @@ def main():
                 (fixture / filename).write_text(value)
             for path in fixture.iterdir():
                 path.chmod(0o644)  # ephemeral files for isolated nonroot containers, never retained
-            ledger = start('ledger', 'app', ['--entrypoint', 'python', *bind(fixture, '/fixture'),
+            ledger = start('ledger', 'app', ['--entrypoint', 'python',
+                *bind(fixture / 'cert.pem', '/fixture/cert.pem'), *bind(fixture / 'key.pem', '/fixture/key.pem'),
                 *bind(ROOT / 'tests/production/ledger_server.py', '/ledger_server.py')], ['/ledger_server.py'])
             data = volume('data')
             pg = start('postgres', 'database', ['--tmpfs', '/var/run/postgresql:uid=999,gid=999,mode=3775,size=8m',
@@ -167,6 +168,71 @@ def main():
                     response = client.post(path, json=payload)
                     assert response.status_code == 200, (path, response.status_code, response.text)
                     return response.json()
+
+                def metrics_snapshot():
+                    raw = run(['docker', 'exec', apis['blue'], 'python', '-c',
+                        "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/internal/metrics', timeout=2).read().decode())"], True)
+                    from prometheus_client.parser import text_string_to_metric_families
+                    wanted = {'recserve_database_errors_total', 'recserve_database_pool_checked_out',
+                              'recserve_retrieval_duration_seconds_count', 'recserve_privacy_ready'}
+                    return [dict(name=s.name, labels=s.labels, value=s.value)
+                            for family in text_string_to_metric_families(raw) for s in family.samples
+                            if s.name in wanted]
+
+                def restart_during_probes(component, while_down=None):
+                    # Closed-loop availability probes, not an open-loop capacity test.
+                    import threading
+                    samples, stop = [], threading.Event()
+                    healthy, failed, recovered = (threading.Event() for _ in range(3))
+                    started, restart_started = time.monotonic(), None
+
+                    def probe():
+                        with httpx.Client(base_url=origin, verify=context, timeout=6, trust_env=False) as observer:
+                            while not stop.is_set():
+                                began = time.monotonic()
+                                try:
+                                    status = observer.get('/readyz').status_code
+                                except httpx.HTTPError:
+                                    status = 'transport_error'
+                                ended = time.monotonic()
+                                samples.append(dict(start_s=began - started, duration_s=ended - began, status=status))
+                                if status == 200:
+                                    healthy.set()
+                                    if restart_started is not None and began >= restart_started:
+                                        recovered.set()
+                                elif healthy.is_set():
+                                    failed.set()
+                                stop.wait(.1)
+
+                    worker = threading.Thread(target=probe)
+                    worker.start()
+                    try:
+                        assert healthy.wait(15), 'No successful probe before fault'
+                        killed_at = time.monotonic()
+                        run(['docker', 'kill', component])
+                        assert failed.wait(20), 'Outage was not observed'
+                        if while_down is not None:
+                            while_down()
+                        restart_started = time.monotonic()
+                        run(['docker', 'start', component])
+                        assert recovered.wait(30), 'Service did not recover after restart'
+                        restart_to_ready_s = time.monotonic() - restart_started
+                    finally:
+                        stop.set()
+                        worker.join(10)
+                        probe_report = directory / (component.removeprefix(prefix + '-') + '-probes.json')
+                        probe_report.write_text(json.dumps(dict(source=source, samples=samples,
+                            recovered=recovered.is_set(), worker_stopped=not worker.is_alive()), indent=2) + '\n')
+                        assert not worker.is_alive(), 'Availability probe did not stop'
+                    assert any(s['status'] != 200 for s in samples)
+                    assert samples[0]['status'] == samples[-1]['status'] == 200
+                    return dict(component=component.removeprefix(prefix + '-'),
+                        probe_path='/readyz', workload='one closed-loop HTTPS probe, 100ms pause after each attempt',
+                        timeout_s=6, fault_offset_s=killed_at - started,
+                        restart_offset_s=restart_started - started,
+                        restart_to_ready_s=restart_to_ready_s, attempts=len(samples),
+                        failed=sum(s['status'] != 200 for s in samples), samples=samples)
+
                 assert client.put('/api/v2/me/consent', json={'adult': True, 'research': True}).status_code == 200
                 pref = client.put('/api/v2/preferences', json={'request_id': str(uuid.uuid4()), 'changes': [{'item_id': 1, 'value': 1}]})
                 assert pref.status_code == 200, pref.text
@@ -176,7 +242,8 @@ def main():
                 assert all(item['id'] != 1 for item in first['items'])
                 item_id = first['items'][0]['id']
                 for kind in ('shown', 'save'):
-                    post('/api/v2/events', {'event_id': str(uuid.uuid4()), 'request_id': request['request_id'], 'item_id': item_id, 'kind': kind, 'event_time_ms': int(time.time() * 1000)})
+                    saved_event = {'event_id': str(uuid.uuid4()), 'request_id': request['request_id'], 'item_id': item_id, 'kind': kind, 'event_time_ms': int(time.time() * 1000)}
+                    post('/api/v2/events', saved_event)
                 def switch(color):
                     new = routing / 'next.caddy'
                     new.write_text('reverse_proxy api-' + color + ':8000\n')
@@ -194,24 +261,63 @@ def main():
                 assert rolled['model_version'] == digests['blue']
                 assert rolled['preference_revision'] == fresh['preference_revision']
                 rollback_s = time.monotonic() - rollback_start
-                run(['docker', 'stop', '-t', '2', prefix + '-retrieval-blue'])
-                degraded = post('/api/v2/recommendations', {'request_id': str(uuid.uuid4()), 'k': 10})
-                assert degraded['degraded'] and all(item['id'] not in (1, item_id) for item in degraded['items'])
+
+                outage_metrics, degraded = {}, None
+
+                def retrieval_down():
+                    nonlocal degraded
+                    assert client.get('/healthz').status_code == 200
+                    degraded = post('/api/v2/recommendations', {'request_id': str(uuid.uuid4()), 'k': 10})
+                    assert degraded['degraded'] and all(item['id'] not in (1, item_id) for item in degraded['items'])
+                    outage_metrics['retrieval'] = metrics_snapshot()
+                    assert any(s['name'] == 'recserve_retrieval_duration_seconds_count'
+                        and s['labels']['outcome'] in ('connection', 'timeout') and s['value'] > 0
+                        for s in outage_metrics['retrieval'])
+
+                recovery = [restart_during_probes(prefix + '-retrieval-blue', retrieval_down)]
+                recovered_result = post('/api/v2/recommendations', {'request_id': str(uuid.uuid4()), 'k': 10})
+                assert not recovered_result['degraded']
+                assert all(item['id'] not in (1, item_id) for item in recovered_result['items'])
+                assert post('/api/v2/recommendations', {'request_id': degraded['request_id'], 'k': 10}) == degraded
+
+                def database_down():
+                    assert client.get('/healthz').status_code == 200
+                    assert client.get('/api/v2/me').status_code == 503
+                    outage_metrics['database'] = metrics_snapshot()
+                    assert any(s['name'] == 'recserve_database_errors_total' and s['value'] > 0
+                        for s in outage_metrics['database'])
+
+                recovery.append(restart_during_probes(pg, database_down))
+                assert client.get('/api/v2/me').status_code == 200
+                assert post('/api/v2/recommendations', request) == first
+                assert client.get('/api/v2/preferences').json() == {
+                    'items': [{'item_id': 1, 'value': 1}], 'preference_revision': fresh['preference_revision']}
+                recovery.append(restart_during_probes(apis['blue']))
+                assert post('/api/v2/recommendations', request) == first
+                assert post('/api/v2/events', saved_event) == {'accepted': True, 'duplicate': True}
+                after_restart = post('/api/v2/recommendations', {'request_id': str(uuid.uuid4()), 'k': 10})
+                assert not after_restart['degraded']
+                assert after_restart['preference_revision'] == fresh['preference_revision']
+                assert all(item['id'] not in (1, item_id) for item in after_restart['items'])
+
                 deletion = client.delete('/api/v2/me')
                 assert deletion.status_code == 204, (deletion.status_code, deletion.text)
                 assert client.get('/api/v2/me').status_code == 401
                 client.headers.update({'Cookie': '__Host-recserve=' + accounts[1]['token'], 'x-csrf-token': accounts[1]['csrf']})
                 run(['docker', 'stop', '-t', '2', ledger])
+                ledger_failure_started = time.monotonic()
                 assert client.delete('/api/v2/me').status_code == 503
+                ledger_failure_s = time.monotonic() - ledger_failure_started
+                assert ledger_failure_s < 10, 'Ledger failure exceeded proxy response budget'
                 assert client.get('/api/v2/me').status_code == 200
-                run(['docker', 'stop', '-t', '2', pg])
-                assert client.get('/api/v2/me').status_code == 503
             environment = dict(os.environ, APP_HOSTNAME='localhost', GOOGLE_CLIENT_ID='synthetic-test-only',
                 DATABASE_IMAGE=images['database']['id'], APP_IMAGE_BLUE=images['app']['id'], WEB_IMAGE=images['web']['id'],
                 MODEL_DIR_BLUE=str(fixture / 'blue'), SECRETS_DIR=str(fixture), ROUTING_DIR=str(routing),
                 PRIVACY_S3_ENDPOINT='https://ledger:5000', PRIVACY_S3_REGION='us-east-1', PRIVACY_S3_BUCKET='test-ledger', LOG_DRIVER='local')
             run(['docker', 'compose', '-f', 'compose.production.yml', 'config', '--quiet'], env=environment)
             report = dict(source=source, images=images, model_digests=digests, rollback_s=rollback_s,
+                recovery=recovery, outage_metrics=outage_metrics, restart_retries_preserved=True,
+                ledger_failure_s=ledger_failure_s,
                 https=True, runtime_ddl_forbidden=True, cross_model_retries=True, preferences_survive_rollback=True,
                 degraded_filtering=True, database_failure_closed=True, deletion_ledger_failure_closed=True,
                 scope='local synthetic containers; fixture S3 transport; not cloud, OAuth or off-host qualification')

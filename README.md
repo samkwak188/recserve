@@ -29,6 +29,12 @@ acceptance run. See [pilot setup and API](docs/PILOT.md).
 | Kafka/Flink/RCU demonstrations | Separate experiments; not the pilot's durable feature transport |
 | Sharding, tuning, cost board | Experiments, not distributed HA or verified current cloud savings |
 
+The authenticated PostgreSQL successor and its deployment gates are documented
+in [the implementation ledger](docs/PRODUCTION.md). The latest
+[dependency diagnosis and recovery report](results/RELIABILITY_REPORT.md) covers
+real contention, forced process restarts, and encrypted restore checks. This
+remains local validation; external alerting and cloud qualification are open.
+
 ## Three deliberate decisions
 
 1. **CPU is the default.** The small real-data service sweep favored CPU

@@ -64,3 +64,33 @@ def test_metrics_have_no_user_identity_labels(app, client):
     assert response.status_code == 200
     assert 'recserve_http_requests_total' in response.text
     assert actor.user_id not in response.text and token not in response.text
+
+
+def test_ledger_sdk_does_not_retry_service_failures(monkeypatch):
+    from botocore.awsrequest import AWSResponse
+    from botocore.exceptions import ClientError
+    settings = dict(PRIVACY_S3_ENDPOINT='https://ledger.invalid',
+        PRIVACY_S3_REGION='us-east-1', PRIVACY_S3_ACCESS_KEY_ID='fixture',
+        PRIVACY_S3_SECRET_ACCESS_KEY='fixture', PRIVACY_S3_BUCKET='fixture-bucket',
+        PRIVACY_FERNET_KEY=Fernet.generate_key().decode())
+    for key, value in settings.items():
+        monkeypatch.setenv(key, value)
+    ledger = S3DeletionLedger.from_env()
+    attempts = []
+
+    class Body:
+        def stream(self, **kwargs):
+            yield b'<Error><Code>ServiceUnavailable</Code><Message>Fixture</Message></Error>'
+
+    def unavailable(request, **kwargs):
+        attempts.append(1)
+        return AWSResponse(request.url, 503, {'content-type': 'application/xml'}, Body())
+
+    # Use the real SDK retry engine with a controlled transport response.
+    ledger.client.meta.events.register('before-send.s3.PutObject', unavailable)
+    try:
+        with pytest.raises(ClientError):
+            ledger.record(str(uuid.uuid4()))
+        assert len(attempts) == 1
+    finally:
+        ledger.client.close()

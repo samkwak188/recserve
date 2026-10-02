@@ -1,5 +1,18 @@
 # Agent handoff
 
+## Dependency recovery checkpoint: 2026-10-02
+
+Read docs/PRODUCTION.md, deploy/README.md and results/RELIABILITY_REPORT.md
+for the authenticated PostgreSQL successor; the SQLite pilot below remains
+a supported historical workflow. Private metrics now diagnose pool contention
+and retrieval outcomes. Integration has 39 passing tests. The operations stage
+force-kills/restarts retrieval, PostgreSQL and API under HTTPS observation,
+checks exact retries and eligibility, then verifies encrypted WAL recovery.
+Failed probe samples are CI artifacts. Ledger SDK calls must not automatically
+retry inside account deletion: this exceeded the proxy response budget.
+Source hashes and measured timing boundaries are in the reliability report.
+Cloud deployment, external alerts and GPU sanitizer approval remain open.
+
 ## Local pilot continuation: 2026-09-20
 
 Read README.md, docs/PILOT.md, docs/OWNERSHIP_PLAN.md and

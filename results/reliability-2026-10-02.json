@@ -1,0 +1,384 @@
+{
+  "date": "2026-10-02",
+  "scope": "Single Windows/Ubuntu WSL workstation with local Docker; synthetic accounts and models. No cloud or off-host alert evidence.",
+  "code_sha256": {
+    "recserve_app/api.py": "612c535fe61618142a53694c3fbd25fb57f564c0d364d956e9da99de80e7ae07",
+    "recserve_app/telemetry.py": "4164f54b94e1b8c959e2ca3dd54767ab5ecd143b0a75ac4eb7e6bbe7c71d3ec1",
+    "recserve_app/retrieval.py": "72ee7c3a74aea12ae7d7d3bd1589887b8270e5f59d390067d364c36bab40737d",
+    "recserve_app/privacy.py": "49ae19133497984b1ac8611fef58de3b3a25d5cf8c7e76dba18b466d68eee61e",
+    "scripts/check_operations.py": "4576a39d5a413dbc2bdb580ddd667c85951a8cb79a023eebf4999a23104abd2d",
+    "scripts/check_recovery.py": "f2cafac41c8bac47fc1457e65f1a37ef829f7a661cb84edde071b116904870ab",
+    "tests/production/test_diagnostics.py": "6e1238c091be696e7594787cfd28d5dd5674f339cffc06d2660c664d0bb4daf2",
+    "tests/production/test_privacy.py": "bb421c95089a431e24b1ca0ee0e66d00e77e5f57758483ec3bcd617169498a3e"
+  },
+  "baseline": {
+    "legacy_python_tests": 28,
+    "cpu_ctest_suites": 7,
+    "synthetic_restart_demo": "passed",
+    "movielens_restart_demo": "passed",
+    "logs": ".cache/logs/pilot-*"
+  },
+  "integration": {
+    "receipt": ".cache/production/runs/20261002T185223Z-integration-7ec1f177/receipt.json",
+    "status": "passed",
+    "started_utc": "2026-10-02T18:52:23.910869+00:00",
+    "finished_utc": "2026-10-02T18:53:00.030825+00:00",
+    "fingerprint": "8c05ed7425d7d24211f94113821ef028b92dd31f96661f1d73762296726aeda5",
+    "source": {
+      "commit": "a0fa8c6370996e2ba1587b7d7118360146e41907",
+      "source_sha256": "ce39e3e203315b9ad5d7f55ae556abd0778f1e06ef7eca051b81d6dfdacebb4c"
+    },
+    "steps": [
+      {
+        "command": [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build-production",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DRECSERVE_WITH_CUDA=OFF"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 1.67,
+        "log": "00-configure.log",
+        "log_sha256": "a0b5f58b4ca0a4593cd85ed804021ea0237ad035a64caa1d13639157f95a5250"
+      },
+      {
+        "command": [
+          "cmake",
+          "--build",
+          "build-production",
+          "-j",
+          "4"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 1.77,
+        "log": "01-build.log",
+        "log_sha256": "9211b11378a0273fe74ba7aae566e4aec20e4af8b8c9b222cafe128e423dac3d"
+      },
+      {
+        "command": [
+          "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+          "scripts/check_production.py"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 30.47,
+        "log": "02-postgres-api.log",
+        "log_sha256": "0021aadbd7e73d9ca53ba7015ea70feb515d8592ac2c68b5e350a68357e70d8d"
+      }
+    ]
+  },
+  "operations": {
+    "receipt": ".cache/production/runs/20261002T185333Z-operations-9ed1608c/receipt.json",
+    "status": "passed",
+    "started_utc": "2026-10-02T18:53:33.426261+00:00",
+    "finished_utc": "2026-10-02T18:55:07.155278+00:00",
+    "fingerprint": "f5f6c702c989af15660165dbfe70913760691727cfb1ef512e9a6e19f6bd5f43",
+    "source": {
+      "commit": "a0fa8c6370996e2ba1587b7d7118360146e41907",
+      "source_sha256": "ce39e3e203315b9ad5d7f55ae556abd0778f1e06ef7eca051b81d6dfdacebb4c"
+    },
+    "steps": [
+      {
+        "command": [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build-production",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DRECSERVE_WITH_CUDA=OFF"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 1.269,
+        "log": "00-configure.log",
+        "log_sha256": "a95268b6ef990ed09ef2ac399539eebaf7be98b1bd2e9439cbb8d257219ab205"
+      },
+      {
+        "command": [
+          "cmake",
+          "--build",
+          "build-production",
+          "--target",
+          "recserve_fixture",
+          "-j",
+          "4"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 0.717,
+        "log": "01-build-fixture.log",
+        "log_sha256": "57013833264bf3060448d917ae4e4c8a12a6ec1f8b0d7aa42fd5321d224b51c1"
+      },
+      {
+        "command": [
+          "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+          "scripts/operations_production.py"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 86.29,
+        "log": "02-container-proofs.log",
+        "log_sha256": "54df55c8b3000c56dcc8f513a5a9b9792e08054a69cb58f1949c32e1951578a7"
+      }
+    ]
+  },
+  "integration_tests": 39,
+  "service_recovery": {
+    "source": {
+      "commit": "a0fa8c6370996e2ba1587b7d7118360146e41907",
+      "source_sha256": "ce39e3e203315b9ad5d7f55ae556abd0778f1e06ef7eca051b81d6dfdacebb4c"
+    },
+    "images": {
+      "app": {
+        "tag": "recserve-pilot-app:ce39e3e20331",
+        "id": "sha256:bc8a820814baf2af93877794a05a8732be855eb3ba4671d159fcd7cec505f67e"
+      },
+      "web": {
+        "tag": "recserve-pilot-web:ce39e3e20331",
+        "id": "sha256:7aa00f40da9dcc7a8f377636564a4c5ceb342519402cfe2a56650e72280dd925"
+      },
+      "database": {
+        "tag": "recserve-pilot-database:ce39e3e20331",
+        "id": "sha256:25bfe1cb89c9874ce514fedba08df5172e1be52eba523085ba87341f717f607a"
+      }
+    },
+    "model_digests": {
+      "blue": "fd5fd4f413a38c356cf8ef8fb956c170ba9e0bd9819af87dcf6a83291b565dee",
+      "green": "5808cea205e3f7c067bb8faeded0f6b8b5fd54c9ca0fa5354c155db6c708442b"
+    },
+    "rollback_s": 0.1872089240000605,
+    "recovery": [
+      {
+        "component": "retrieval-blue",
+        "probe_path": "/readyz",
+        "workload": "one closed-loop HTTPS probe, 100ms pause after each attempt",
+        "timeout_s": 6,
+        "fault_offset_s": 0.004982773000165253,
+        "restart_offset_s": 1.0506271220001508,
+        "restart_to_ready_s": 0.4822394059999624,
+        "attempts": 8,
+        "failed": 6,
+        "samples": [
+          {
+            "start_s": 0.00048547500000495347,
+            "duration_s": 0.004450001000122938,
+            "status": 200
+          },
+          {
+            "start_s": 0.10510036800019407,
+            "duration_s": 0.2037007049998465,
+            "status": 503
+          },
+          {
+            "start_s": 0.4088867940001819,
+            "duration_s": 0.20613706699987233,
+            "status": 503
+          },
+          {
+            "start_s": 0.7151322550000714,
+            "duration_s": 0.2036365520000345,
+            "status": 503
+          },
+          {
+            "start_s": 1.0188548910000463,
+            "duration_s": 0.20408475099998213,
+            "status": 503
+          },
+          {
+            "start_s": 1.3230331550000756,
+            "duration_s": 0.002894339000022228,
+            "status": 503
+          },
+          {
+            "start_s": 1.4260584860001018,
+            "duration_s": 0.0030386440000711445,
+            "status": 503
+          },
+          {
+            "start_s": 1.5292229520000546,
+            "duration_s": 0.0036037679999481043,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "component": "postgres",
+        "probe_path": "/readyz",
+        "workload": "one closed-loop HTTPS probe, 100ms pause after each attempt",
+        "timeout_s": 6,
+        "fault_offset_s": 0.004955731000109154,
+        "restart_offset_s": 10.851349320000054,
+        "restart_to_ready_s": 2.2509896359999857,
+        "attempts": 5,
+        "failed": 3,
+        "samples": [
+          {
+            "start_s": 0.00027488899991112703,
+            "duration_s": 0.004643842000177756,
+            "status": 200
+          },
+          {
+            "start_s": 0.10515691799992055,
+            "duration_s": 3.004133806000027,
+            "status": 503
+          },
+          {
+            "start_s": 3.2093919690000803,
+            "duration_s": 6.006258613,
+            "status": "transport_error"
+          },
+          {
+            "start_s": 9.315774776000126,
+            "duration_s": 3.6726251899999625,
+            "status": 503
+          },
+          {
+            "start_s": 13.088487748000034,
+            "duration_s": 0.013779737000049863,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "component": "api-blue",
+        "probe_path": "/readyz",
+        "workload": "one closed-loop HTTPS probe, 100ms pause after each attempt",
+        "timeout_s": 6,
+        "fault_offset_s": 0.004668502999948032,
+        "restart_offset_s": 3.1090071069997975,
+        "restart_to_ready_s": 3.2127930470001047,
+        "attempts": 4,
+        "failed": 2,
+        "samples": [
+          {
+            "start_s": 0.00020959899984518415,
+            "duration_s": 0.004410657000107676,
+            "status": 200
+          },
+          {
+            "start_s": 0.10473885299984431,
+            "duration_s": 3.0042106969999622,
+            "status": 502
+          },
+          {
+            "start_s": 3.209074216999852,
+            "duration_s": 3.001507581999931,
+            "status": 502
+          },
+          {
+            "start_s": 6.3106990530000076,
+            "duration_s": 0.011046252999904027,
+            "status": 200
+          }
+        ]
+      }
+    ],
+    "outage_metrics": {
+      "retrieval": [
+        {
+          "name": "recserve_database_pool_checked_out",
+          "labels": {},
+          "value": 0
+        },
+        {
+          "name": "recserve_privacy_ready",
+          "labels": {},
+          "value": 1
+        },
+        {
+          "name": "recserve_retrieval_duration_seconds_count",
+          "labels": {
+            "outcome": "success"
+          },
+          "value": 4
+        },
+        {
+          "name": "recserve_retrieval_duration_seconds_count",
+          "labels": {
+            "outcome": "timeout"
+          },
+          "value": 4
+        }
+      ],
+      "database": [
+        {
+          "name": "recserve_database_errors_total",
+          "labels": {
+            "reason": "other"
+          },
+          "value": 3
+        },
+        {
+          "name": "recserve_database_pool_checked_out",
+          "labels": {},
+          "value": 1
+        },
+        {
+          "name": "recserve_privacy_ready",
+          "labels": {},
+          "value": 1
+        },
+        {
+          "name": "recserve_retrieval_duration_seconds_count",
+          "labels": {
+            "outcome": "success"
+          },
+          "value": 7
+        },
+        {
+          "name": "recserve_retrieval_duration_seconds_count",
+          "labels": {
+            "outcome": "timeout"
+          },
+          "value": 5
+        },
+        {
+          "name": "recserve_retrieval_duration_seconds_count",
+          "labels": {
+            "outcome": "connection"
+          },
+          "value": 2
+        }
+      ]
+    },
+    "restart_retries_preserved": true,
+    "ledger_failure_s": 3.794969673999958,
+    "https": true,
+    "runtime_ddl_forbidden": true,
+    "cross_model_retries": true,
+    "preferences_survive_rollback": true,
+    "degraded_filtering": true,
+    "database_failure_closed": true,
+    "deletion_ledger_failure_closed": true,
+    "scope": "local synthetic containers; fixture S3 transport; not cloud, OAuth or off-host qualification"
+  },
+  "encrypted_restore": {
+    "source": {
+      "commit": "a0fa8c6370996e2ba1587b7d7118360146e41907",
+      "source_sha256": "ce39e3e203315b9ad5d7f55ae556abd0778f1e06ef7eca051b81d6dfdacebb4c"
+    },
+    "image": "sha256:25bfe1cb89c9874ce514fedba08df5172e1be52eba523085ba87341f717f607a",
+    "scope": "local encrypted repository; not off-host/cloud evidence",
+    "records_recovered": 2,
+    "wrong_encryption_key_rejected": true,
+    "archive_confirmation_s": 0.22264435900001445,
+    "restore_s": 3.7444007579999834,
+    "elapsed_s": 14.416413401,
+    "off_host": false,
+    "postgres_version": "17.11 (Debian 17.11-1.pgdg12+2)"
+  },
+  "failed_iterations": [
+    {
+      "receipt": ".cache/production/runs/20261002T184319Z-operations-8a7650aa/receipt.json",
+      "cause": "Killed retrieval timed out rather than refusing a connection; assert either transport classification and retain actual samples."
+    },
+    {
+      "receipt": ".cache/production/runs/20261002T184858Z-operations-4859cf18/receipt.json",
+      "cause": "Ledger deletion took 11.501 seconds and exceeded the proxy write deadline; one SDK attempt and tighter socket timeouts repaired the tested failure path."
+    },
+    {
+      "hosted_run": "https://github.com/samkwak188/recserve/actions/runs/37049105463",
+      "cause": "Nonroot ledger fixture could not traverse mode-0700 temporary directory; mount certificate files individually."
+    }
+  ]
+}

@@ -24,7 +24,10 @@ class S3DeletionLedger:
         client = boto3.client('s3', endpoint_url=endpoint, region_name=os.environ['PRIVACY_S3_REGION'],
             aws_access_key_id=os.environ['PRIVACY_S3_ACCESS_KEY_ID'],
             aws_secret_access_key=os.environ['PRIVACY_S3_SECRET_ACCESS_KEY'],
-            config=Config(connect_timeout=2, read_timeout=3, retries={'total_max_attempts': 2},
+            # Do not retry inside the account transaction or consume the proxy's
+            # response budget. The caller can retry an uncertain deletion; the
+            # same tombstone key and reconciliation preserve its effect.
+            config=Config(connect_timeout=1, read_timeout=2, retries={'total_max_attempts': 1},
                           s3={'addressing_style': 'path'}))
         return cls(client, os.environ['PRIVACY_S3_BUCKET'], os.environ['PRIVACY_FERNET_KEY'].encode())
 

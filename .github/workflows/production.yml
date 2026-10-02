@@ -25,6 +25,7 @@ jobs:
             .cache/production/images/*/images.json
             .cache/production/operations/*/*.log
             .cache/production/operations/*/report.json
+            .cache/production/operations/*/*-probes.json
             .cache/production/recovery/*/*.log
             .cache/production/recovery/*/report.json
   postgres-api:

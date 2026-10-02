@@ -143,3 +143,35 @@ rollback, release, and one successful effect after an identical retry. Real
 socket tests cover disconnects, malformed responses and a trickling peer that
 cannot extend the absolute retrieval deadline. These are fault assertions, not
 capacity measurements or deployed alert evidence.
+
+## Restart drill under HTTPS observation
+
+The operations stage force-kills and restarts each blue retrieval, PostgreSQL,
+and API container, one at a time. An independent HTTPS client continuously
+probes /readyz, recording every response or transport error and its elapsed
+time. The database and retrieval outages must leave /healthz alive while
+readiness fails. Retrieval failure must preserve eligible, labeled fallback;
+database failure must refuse authenticated reads. Recovery must preserve
+preferences, saved exclusions, exact old recommendation responses, and
+duplicate-event semantics without restarting the unaffected services.
+
+Reports include restart-command-to-first-success timing and all probe attempts,
+including failures. The observer runs one request at a time, pausing 100 ms
+after completion with a six-second timeout: this is sampled recovery evidence,
+not open-loop throughput, continuous availability, or a cloud RTO. API outages
+can produce proxy 502s; dependency outages produce API 503s. A stopped retrieval
+container can cause either refused connections or timeouts. Raw *-probes.json
+files survive failed assertions and are uploaded by the container CI job.
+
+This restarts existing containers and their addresses. It does not prove
+replacement-host recovery or DNS/address changes. The encrypted fresh-volume
+restore remains a separate drill. External alert delivery is still unconfigured.
+
+Deletion-ledger SDK calls use one attempt with one-second connect and two-second
+read timeouts. Automatic retries previously let a stopped-ledger call take
+11.5 seconds, beyond Caddy's ten-second response window. The caller may retry an
+uncertain deletion; the same tombstone key and independent replay preserve its
+effect. The container drill requires an HTTP 503 before that proxy deadline and
+verifies the account was not removed when the ledger was unreachable. Socket
+timeouts are not a universal wall-clock bound on DNS resolution; deployed DNS
+failure behavior still needs qualification.
