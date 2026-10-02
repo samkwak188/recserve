@@ -15,7 +15,8 @@ def main():
     if not report.is_relative_to(ROOT / '.cache/production/images') or not report.is_file():
         raise RuntimeError('Build did not return an owned immutable image report')
     for script in ('check_operations.py', 'check_recovery.py'):
-        subprocess.run([sys.executable, 'scripts/' + script, '--images', str(report)], cwd=ROOT,
+        extra = ['--monitoring'] if '--monitoring' in sys.argv and script == 'check_operations.py' else []
+        subprocess.run([sys.executable, 'scripts/' + script, '--images', str(report), *extra], cwd=ROOT,
                        check=True, timeout=600)
 
 

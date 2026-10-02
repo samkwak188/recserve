@@ -1,0 +1,16 @@
+global:
+  resolve_timeout: 1m
+route:
+  receiver: operator
+  group_by: [alertname, job, instance]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 4h
+receivers:
+  - name: operator
+    webhook_configs:
+      - url_file: /run/secrets/alert_webhook_url
+        send_resolved: true
+        max_alerts: 20
+        http_config:
+          follow_redirects: false

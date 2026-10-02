@@ -147,3 +147,19 @@ storage, live Google configuration, cloud resource limits and owner approvals
 are still mandatory. Infrastructure provisioning, the external monitoring and
 alert path, full qualification/release gating, and the 30-day pilot remain
 unfinished; local integration receipts do not substitute for them.
+
+## Monitoring checkpoint: 2026-10-02
+
+The monitoring stage now runs Prometheus, Blackbox Exporter and Alertmanager
+with pinned images against the production containers. Nine unchanged production
+rule scenarios pass. The local drill verifies trusted HTTPS probes, private
+metrics, outage delivery, a rejected webhook retry, recovery and missing-prober
+alerts. Each notification must follow the injected event; resolutions must match
+the firing alert fingerprint and activation time. See
+[monitoring evidence](../results/monitoring-2026-10-02.json) and
+[operator instructions](../deploy/MONITORING.md). The stage also reruns the
+container operations and encrypted WAL restore proofs.
+
+The receiver is isolated test infrastructure. No external operator was notified
+and no cloud resource was deployed. Off-host observation, actual notification
+acknowledgement, backup age and host resource alerts remain release gates.

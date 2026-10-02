@@ -1,0 +1,128 @@
+{
+  "status": "passed",
+  "started_utc": "2026-10-02T19:49:09.813942+00:00",
+  "finished_utc": "2026-10-02T19:51:05.956438+00:00",
+  "source_parent": "67d961054a8fb7e22755c19e02742c25bed83866",
+  "source_sha256": "d8cb9e5a954876fa8e1f36c914aaf5492ac13164362c2e5a252366a051767a08",
+  "source_files_sha256": {
+    "scripts/monitoring.py": "159b255f10e8b3a89a88266802e354edba1b78e65cfb2ef4ffe8e42063239433",
+    "scripts/check_operations.py": "35f9499851f344257e27246be2e22a1a4b5b2e34dd0a0e3e43908df849f1b3ae",
+    "scripts/operations_production.py": "d60746ae126c350c5ef3a4e5888e08eb69d515a2e6da875ac5c0a293003f8e3e",
+    "scripts/production_stages.json": "ea0a2f7c36898c6292c703a97b7cf90caf9d5e7f4436268432cd4b32c73849d7",
+    "tests/production/alert_receiver.py": "3e9e27cdb5a15b73fb57bfae87e8f3299c8a74325c6600387ecd4668ad3b5d2e",
+    "deploy/Caddyfile": "57742f8309f6747dee85707860ffc9eea51cdb6438dbe320eba86398fd1db128",
+    "compose.monitoring.yml": "081cae1cbfa7a9ad44cfe2205d732b7de3551b70bcd86e77f59438b9f48a457f",
+    "deploy/monitoring/alertmanager.yml": "6a1798ed7bb5fea8d07f58a473a563515bf6899801b2b5ac68bff413f8a2def1",
+    "deploy/monitoring/blackbox.yml": "8b630c6c36130a32bcc09170c4e178682465e14c3fcdfa5a2edd29716f35e2c9",
+    "deploy/monitoring/images.json": "6e357ccaeab21f5bafce1086ef2b8ca673b1fbe5e6042c5b5848a9d333de3730",
+    "deploy/monitoring/prometheus.yml": "b79e87a839df7679990b9bc78a070c690cf4aa611821dcf4093cb6f9152fa4d0",
+    "deploy/monitoring/rules.test.yml": "c8b7290d466a747a35fb75004a2ab8614a4e6bda6c4ad1bb0970b646b8486674",
+    "deploy/monitoring/rules.yml": "5a86e283e84a38b6bbcc3c4bc2b72cf18bea548784bbe82cebc89d539d5ce70b"
+  },
+  "receipt": ".cache/production/runs/20261002T194909Z-monitoring-53c333ed/receipt.json",
+  "steps": [
+    {
+      "command": [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build-production",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DRECSERVE_WITH_CUDA=OFF"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 1.268,
+      "log": "00-configure.log",
+      "log_sha256": "a95268b6ef990ed09ef2ac399539eebaf7be98b1bd2e9439cbb8d257219ab205"
+    },
+    {
+      "command": [
+        "cmake",
+        "--build",
+        "build-production",
+        "--target",
+        "recserve_fixture",
+        "-j",
+        "4"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.667,
+      "log": "01-build-fixture.log",
+      "log_sha256": "99ff5d976fa7c85c89a5037e2d81bd7a39ca43e2a8a2cf65aab36fe120a1e021"
+    },
+    {
+      "command": [
+        "/mnt/c/Users/samis/Desktop/1. recserve/.cache/venv-production/bin/python",
+        "scripts/operations_production.py",
+        "--monitoring"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 106.388,
+      "log": "02-monitoring-proofs.log",
+      "log_sha256": "83e422e0fecfcdda3ec79b7f483a637436c67dea7fad011a5281c1da70790a61"
+    }
+  ],
+  "report": {
+    "scope": "Local containers and isolated webhook fixture; no external operator notified.",
+    "timings": "Test-only 1s scrape/evaluation and 3s alert holds. Production holds are unit tested unchanged.",
+    "tls_verified": true,
+    "private_metrics_scraped": true,
+    "receiver_retry_verified": true,
+    "outage_to_delivery_s": 6.193,
+    "restart_to_resolved_s": 1.667,
+    "matched_retry_fingerprints": [
+      "30ecd5a2337dbbeb"
+    ],
+    "probe_outage_to_delivery_s": 5.992,
+    "probe_restart_to_resolved_s": 3.88,
+    "missing_probe_detected": true,
+    "production_rule_tests": 9,
+    "observations": [
+      {
+        "check": "healthy HTTPS and private API scrape",
+        "elapsed_s": 5.255496959000084
+      },
+      {
+        "check": "initial probe alerts cleared",
+        "elapsed_s": 1.209215419999964
+      },
+      {
+        "check": "HTTPS failure delivered",
+        "elapsed_s": 5.856411320999541
+      },
+      {
+        "check": "rejected webhook retried",
+        "elapsed_s": 0.0011787960002038744
+      },
+      {
+        "check": "HTTPS recovery delivered",
+        "elapsed_s": 1.4127030219997323
+      },
+      {
+        "check": "missing probe delivered",
+        "elapsed_s": 4.846417411999937
+      },
+      {
+        "check": "probe recovery delivered",
+        "elapsed_s": 3.636670241000502
+      }
+    ],
+    "production_rules_sha256": "5a86e283e84a38b6bbcc3c4bc2b72cf18bea548784bbe82cebc89d539d5ce70b",
+    "test_rules_sha256": "e5b0f7228906c37e1f1f775c71e69884af23b6ee9d8dc171919de7f6ff1d4c09",
+    "images": {
+      "prometheus": {
+        "tag": "prom/prometheus:v3.13.4",
+        "digest": "prom/prometheus@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e"
+      },
+      "alertmanager": {
+        "tag": "prom/alertmanager:v0.34.1",
+        "digest": "prom/alertmanager@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a"
+      },
+      "blackbox": {
+        "tag": "prom/blackbox-exporter:v0.28.0",
+        "digest": "prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc"
+      }
+    }
+  }
+}

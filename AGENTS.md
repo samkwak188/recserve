@@ -1,5 +1,17 @@
 # Agent handoff
 
+## Monitoring continuation: 2026-10-02
+
+The monitoring stage executes pinned Prometheus/Alertmanager/Blackbox containers,
+nine production-rule scenarios, private metrics, trusted HTTPS outage/recovery,
+HTTP 503 notification retry and stopped-prober detection. See deploy/MONITORING.md
+and results/monitoring-2026-10-02.json. Delivery assertions must be scoped after
+the injected fault and match alert activation time; historical startup alerts
+must never satisfy a later outage. Caddy uses a selected fixed test host port so
+restart preserves APP_ORIGIN. The receiver is local, not external notification
+evidence. Cloud account/domain/alert destination remain unresolved owner inputs.
+
+
 ## Dependency recovery checkpoint: 2026-10-02
 
 Read docs/PRODUCTION.md, deploy/README.md and results/RELIABILITY_REPORT.md

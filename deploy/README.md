@@ -111,9 +111,11 @@ IDs, never identities, cookies, emails or preference payloads. Configure host
 journald retention at seven days and confirm rotation under disk pressure.
 The application periodically expires 90-day raw interactions.
 
-External HTTPS probing, alert delivery, WAL/backup age, disk/RAM, database pool
-and retrieval queue monitoring still need a deployed collector and rehearsed
-alert path. Missing monitoring is unknown, not uptime. Do not invite users
+The locally executed HTTPS probe, alert delivery, missing-observation and
+dependency rules are documented in [MONITORING.md](MONITORING.md). Run
+-Stage monitoring to rehearse actual delivery and recovery against the isolated
+receiver. Off-host probing, external operator delivery, WAL/backup age, disk/RAM
+and retrieval queue monitoring still need deployment and qualification. Missing monitoring is unknown, not uptime. Do not invite users
 until these checks, cloud restore/rollback and the qualification campaign pass.
 
 ## Diagnosing dependency pressure

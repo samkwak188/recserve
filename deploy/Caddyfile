@@ -39,3 +39,15 @@
         file_server
     }
 }
+
+# Private Docker-network listener. Never publish port 9000 on the host.
+:9000 {
+    @metrics path /internal/metrics
+    handle @metrics {
+        request_header Host {$APP_HOSTNAME}
+        import /etc/recserve/upstream.caddy
+    }
+    handle {
+        respond 404
+    }
+}

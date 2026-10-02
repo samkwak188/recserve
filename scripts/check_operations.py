@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import socket
 import ssl
 import subprocess
 import sys
@@ -31,8 +32,13 @@ from scripts.production_runner import source_identity
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--images', type=Path, required=True)
+    parser.add_argument('--monitoring', action='store_true')
     args = parser.parse_args()
     images = json.loads(args.images.read_text())['images']
+    if args.monitoring:
+        for name, image in json.loads((ROOT / 'deploy/monitoring/images.json').read_text()).items():
+            subprocess.run(['docker', 'pull', image['digest']], check=True)
+            images[name] = {'id': image['digest']}
     token = uuid.uuid4().hex[:12]
     prefix = 'recserve-stack-' + token
     directory = ROOT / '.cache/production/operations' / str(time.time_ns())
@@ -125,7 +131,11 @@ def main():
             routing.mkdir()
             upstream = routing / 'upstream.caddy'
             upstream.write_text('reverse_proxy api-blue:8000\n')
-            web = start('web', 'web', ['-p', '127.0.0.1::8443', '-e', 'APP_HOSTNAME=localhost',
+            # A fixed selected port survives a container restart and preserves APP_ORIGIN.
+            with socket.socket() as listener:
+                listener.bind(('127.0.0.1', 0))
+                web_port = listener.getsockname()[1]
+            web = start('web', 'web', ['-p', f'127.0.0.1:{web_port}:8443', '-e', 'APP_HOSTNAME=localhost',
                 *bind(routing, '/etc/recserve'), '--mount', f'type=volume,source={volume("caddy-data")},target=/data',
                 '--mount', f'type=volume,source={volume("caddy-config")},target=/config'])
             port = json.loads(run(['docker', 'inspect', web], True))[0]['NetworkSettings']['Ports']['8443/tcp'][0]['HostPort']
@@ -155,6 +165,9 @@ def main():
                     break
                 time.sleep(.1)
             context = ssl.create_default_context(cafile=str(certificate))
+            if args.monitoring:
+                from scripts.monitoring import verify_monitoring
+                verify_monitoring(run, start, bind, fixture, certificate, directory, web)
             accounts = json.loads(run(['docker', 'exec', apis['blue'], 'python', '/stack_seed.py'], True))
             # Failure assertions wait beyond Caddy's existing 10s write deadline.
             # This is not a latency qualification or a change to a release target.

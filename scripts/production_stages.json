@@ -32,5 +32,47 @@
     ]
   },
   "qualification": {"commands": [{"name": "qualification", "argv": ["{python}", "scripts/qualify_production.py"], "timeout_s": 7200}]},
-  "release-check": {"commands": [{"name": "release-gates", "argv": ["{python}", "scripts/release_production.py"]}]}
+  "release-check": {"commands": [{"name": "release-gates", "argv": ["{python}", "scripts/release_production.py"]}]},
+  "monitoring": {
+    "artifacts": [
+      ".cache/production/operations/*/monitoring-report.json",
+      ".cache/production/operations/*/monitoring-attempts.json"
+    ],
+    "commands": [
+      {
+        "name": "configure",
+        "argv": [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build-production",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DRECSERVE_WITH_CUDA=OFF"
+        ]
+      },
+      {
+        "name": "build-fixture",
+        "argv": [
+          "cmake",
+          "--build",
+          "build-production",
+          "--target",
+          "recserve_fixture",
+          "-j",
+          "4"
+        ],
+        "timeout_s": 900
+      },
+      {
+        "name": "monitoring-proofs",
+        "argv": [
+          "{python}",
+          "scripts/operations_production.py",
+          "--monitoring"
+        ],
+        "timeout_s": 3000
+      }
+    ]
+  }
 }

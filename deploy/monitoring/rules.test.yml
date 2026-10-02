@@ -1,0 +1,287 @@
+{
+  "rule_files": [
+    "rules.yml"
+  ],
+  "evaluation_interval": "15s",
+  "tests": [
+    {
+      "name": "HTTPS outage and resolution",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"recserve-https\",instance=\"fixture\"}",
+          "values": "1 0x20 1x10"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeHTTPSUnavailable\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "30s",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeHTTPSUnavailable\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "1m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeHTTPSUnavailable\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "6m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "No observation is unknown",
+      "interval": "15s",
+      "input_series": [],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeProbeMissing\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeAPIMetricsMissing\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeAlertmanagerMissing\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Exporter loss despite an old good probe",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "probe_success{job=\"recserve-https\",instance=\"fixture\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "up{job=\"recserve-https\",instance=\"fixture\"}",
+          "values": "0x20"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeProbeMissing\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sustained pool pressure and clearance",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "recserve_database_pool_checked_out{job=\"recserve-api\",instance=\"fixture\"}",
+          "values": "7x24 0x8"
+        },
+        {
+          "series": "recserve_database_pool_capacity{job=\"recserve-api\",instance=\"fixture\"}",
+          "values": "8x32"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeDatabasePoolPressure\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "4m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeDatabasePoolPressure\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "5m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeDatabasePoolPressure\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "7m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Privacy failure and recovery",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "recserve_privacy_ready{job=\"recserve-api\",instance=\"fixture\"}",
+          "values": "1 0x20 1x10"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServePrivacyReconciliationFailed\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "count(ALERTS{alertname=\"RecServePrivacyReconciliationFailed\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "6m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Repeated retrieval failure",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "recserve_retrieval_duration_seconds_count{job=\"recserve-api\",instance=\"fixture\",outcome=\"timeout\"}",
+          "values": "0+1x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeRetrievalFailures\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "3m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HTTP errors at meaningful sample count",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "recserve_http_requests_total{job=\"recserve-api\",instance=\"fixture\",route=\"/api/v2/me\",status=\"503\"}",
+          "values": "0+2x30"
+        },
+        {
+          "series": "recserve_http_requests_total{job=\"recserve-api\",instance=\"fixture\",route=\"/api/v2/me\",status=\"200\"}",
+          "values": "0+18x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeHTTPErrors\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "3m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "One sparse HTTP error is insufficient",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "recserve_http_requests_total{job=\"recserve-api\",instance=\"fixture\",route=\"/api/v2/me\",status=\"503\"}",
+          "values": "0 1x30"
+        },
+        {
+          "series": "recserve_http_requests_total{job=\"recserve-api\",instance=\"fixture\",route=\"/api/v2/me\",status=\"200\"}",
+          "values": "0x31"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeHTTPErrors\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "3m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notification failures matter",
+      "interval": "15s",
+      "input_series": [
+        {
+          "series": "alertmanager_notifications_failed_total{job=\"alertmanager\",instance=\"fixture\",integration=\"webhook\"}",
+          "values": "0+1x30"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "count(ALERTS{alertname=\"RecServeAlertDeliveryFailed\",alertstate=\"firing\"}) or vector(0)",
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

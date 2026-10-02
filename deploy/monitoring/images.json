@@ -1,0 +1,14 @@
+{
+  "prometheus": {
+    "tag": "prom/prometheus:v3.13.4",
+    "digest": "prom/prometheus@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e"
+  },
+  "alertmanager": {
+    "tag": "prom/alertmanager:v0.34.1",
+    "digest": "prom/alertmanager@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a"
+  },
+  "blackbox": {
+    "tag": "prom/blackbox-exporter:v0.28.0",
+    "digest": "prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc"
+  }
+}

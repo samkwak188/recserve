@@ -1,0 +1,50 @@
+# Add to the production deployment only after measuring the full host budget.
+# No monitoring endpoint is published to the host.
+x-monitor: &monitor
+  restart: unless-stopped
+  user: "65534:65534"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 64
+  tmpfs: [/tmp:size=16m]
+  networks: [private]
+  logging:
+    driver: ${LOG_DRIVER:-journald}
+
+services:
+  prometheus:
+    <<: *monitor
+    image: prom/prometheus@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e
+    mem_limit: 256m
+    cpus: 0.5
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=7d, --storage.tsdb.retention.size=512MB]
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/rules.yml:/etc/prometheus/rules.yml:ro
+      - ${MONITOR_TARGETS_FILE:?Set an absolute HTTPS targets JSON path}:/etc/prometheus/https-targets.json:ro
+      - prometheus_data:/prometheus
+  blackbox:
+    <<: *monitor
+    image: prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    mem_limit: 64m
+    cpus: 0.25
+    command: [--config.file=/etc/blackbox/blackbox.yml]
+    volumes: [./deploy/monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro]
+  alertmanager:
+    <<: *monitor
+    image: prom/alertmanager@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+    mem_limit: 96m
+    cpus: 0.25
+    command: [--config.file=/etc/alertmanager/alertmanager.yml, --storage.path=/alertmanager, "--cluster.listen-address="]
+    volumes:
+      - ./deploy/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${ALERT_WEBHOOK_FILE:?Set an absolute private webhook URL file path}:/run/secrets/alert_webhook_url:ro
+      - alertmanager_data:/alertmanager
+networks:
+  private:
+    external: true
+    name: ${RECSERVE_PRIVATE_NETWORK:?Set the existing application network name}
+volumes:
+  prometheus_data:
+  alertmanager_data:

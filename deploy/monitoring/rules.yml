@@ -1,0 +1,84 @@
+groups:
+  - name: recserve
+    rules:
+      - alert: RecServeHTTPSUnavailable
+        expr: "probe_success{job=\"recserve-https\"} == 0"
+        for: 30s
+        labels:
+          service: recserve
+          severity: critical
+        annotations:
+          summary: "HTTPS readiness is failing. Inspect proxy, API, database and retrieval readiness."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeProbeMissing
+        expr: "absent(probe_success{job=\"recserve-https\"}) or (up{job=\"recserve-https\"} == 0)"
+        for: 1m
+        labels:
+          service: recserve
+          severity: critical
+        annotations:
+          summary: "Readiness observations are missing. Check the prober and its scrape target; do not report uptime."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeAPIMetricsMissing
+        expr: "absent(up{job=\"recserve-api\"}) or (up{job=\"recserve-api\"} == 0)"
+        for: 1m
+        labels:
+          service: recserve
+          severity: warning
+        annotations:
+          summary: "Private API metrics are missing. Check the internal proxy listener and active API pair."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeDatabasePoolPressure
+        expr: "recserve_database_pool_checked_out / recserve_database_pool_capacity >= 0.875"
+        for: 5m
+        labels:
+          service: recserve
+          severity: warning
+        annotations:
+          summary: "Database pool occupancy is sustained near capacity. Inspect lock waits and request load before raising limits."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServePrivacyReconciliationFailed
+        expr: "recserve_privacy_ready == 0"
+        for: 1m
+        labels:
+          service: recserve
+          severity: critical
+        annotations:
+          summary: "Privacy reconciliation has not succeeded. Verify the independent ledger and database; do not bypass replay."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeRetrievalFailures
+        expr: "sum by (job, instance) (increase(recserve_retrieval_duration_seconds_count{outcome!=\"success\"}[5m])) >= 5"
+        for: 1m
+        labels:
+          service: recserve
+          severity: warning
+        annotations:
+          summary: "Retrieval attempts are failing. Inspect outcome counters, model identity and degraded recommendations."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeHTTPErrors
+        expr: "(sum by (job, instance) (increase(recserve_http_requests_total{route=~\"/api/.*\",status=~\"5..\"}[5m])) / sum by (job, instance) (increase(recserve_http_requests_total{route=~\"/api/.*\"}[5m])) > 0.05) and (sum by (job, instance) (increase(recserve_http_requests_total{route=~\"/api/.*\"}[5m])) >= 20)"
+        for: 1m
+        labels:
+          service: recserve
+          severity: warning
+        annotations:
+          summary: "API 5xx responses exceed the provisional threshold. Inspect database, retrieval and admission signals."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeAlertDeliveryFailed
+        expr: "sum(increase(alertmanager_notifications_failed_total[5m])) > 0"
+        for: 1m
+        labels:
+          service: recserve
+          severity: critical
+        annotations:
+          summary: "Notification delivery is failing. Inspect receiver credentials and reachability through an independent channel."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
+      - alert: RecServeAlertmanagerMissing
+        expr: "absent(up{job=\"alertmanager\"}) or (up{job=\"alertmanager\"} == 0)"
+        for: 1m
+        labels:
+          service: recserve
+          severity: critical
+        annotations:
+          summary: "Alertmanager cannot be scraped. The notification path may be unavailable; check it independently."
+          runbook_url: https://github.com/samkwak188/recserve/blob/main/deploy/MONITORING.md
